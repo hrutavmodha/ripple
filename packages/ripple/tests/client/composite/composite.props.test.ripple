@@ -10,7 +10,7 @@ describe('composite > props', () => {
 			let foo = track(123);
 
 			<Child />
-			<Child {@foo} />
+			<Child {foo} />
 		}
 
 		render(App);
@@ -64,7 +64,7 @@ describe('composite > props', () => {
 			let foo = track(123);
 
 			<Child />
-			<Child {@foo} />
+			<Child {foo} />
 		}
 
 		render(App);
@@ -76,7 +76,7 @@ describe('composite > props', () => {
 	it('mutating a tracked value prop should work as intended', () => {
 		const logs: number[] = [];
 
-		component Counter({count}) {
+		component Counter({ count }) {
 			effect(() => {
 				logs.push(@count);
 			});
@@ -87,9 +87,7 @@ describe('composite > props', () => {
 		component App() {
 			const count = track(0);
 
-			<div>
-				<Counter count={count} />
-			</div>
+			<div><Counter {count} /></div>
 		}
 
 		render(App);
@@ -102,5 +100,5 @@ describe('composite > props', () => {
 		flushSync();
 
 		expect(logs).toEqual([0, 1]);
-	})
+	});
 });

@@ -4,7 +4,7 @@ import {
 	is_event_attribute,
 	is_capture_event,
 	get_attribute_event_name,
-	is_passive_event
+	is_passive_event,
 } from '../../src/utils/events.js';
 
 describe('events utility', () => {
@@ -104,7 +104,7 @@ describe('events utility', () => {
 			expect(is_capture_event('keypressCapture')).toBe(true);
 			expect(is_capture_event('clickcapture')).toBe(false);
 			expect(is_capture_event('keypresscapture')).toBe(false);
-		})
+		});
 	});
 
 	describe('get_attribute_event_name', () => {

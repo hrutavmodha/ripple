@@ -7,13 +7,13 @@ describe('composite > generics', () => {
 
 			// 7. Generic following optional chaining
 			const maybe = {
-				factory<T>() {
+				factory: function() {
 					return {
-						make<U>() {
+						make: function() {
 							return 1;
-						}
+						},
 					};
-				}
+				},
 			};
 			const g = maybe?.factory<number>()?.make<boolean>();
 
@@ -22,12 +22,14 @@ describe('composite > generics', () => {
 			const h = x < y ? 'lt' : 'ge';
 
 			// 9. Chained comparisons with intervening generics
-			class Box<T> {
+			class Box {
 				value: T;
-				constructor(value?: T) {
+
+				constructor(value: T) {
 					this.value = value;
 				}
-				open<U>() {
+
+				open() {
 					return new Box<U>();
 				}
 			}
@@ -40,14 +42,14 @@ describe('composite > generics', () => {
 			</div>
 
 			// 11. Generic function call vs Element: Identifier followed by generic args
-			function identity<T>(value: T): T {
+			function identity(value: T): T {
 				return value;
 			}
 			const j = identity<number>(42);
 
 			// 12. Member + generic call immediately followed by another call
 			class Factory {
-				create<T>() {
+				create() {
 					return (value: T) => value;
 				}
 			}
@@ -55,15 +57,15 @@ describe('composite > generics', () => {
 			const k = factory.create<number>()(123);
 
 			// 13. Multiple generic segments in chain
-			function foo<T>() {
+			function foo() {
 				return {
-					bar<U>() {
+					bar: function() {
 						return {
-							baz<V>() {
+							baz: function() {
 								return true;
-							}
+							},
 						};
-					}
+					},
 				};
 			}
 			const l = foo<number>().bar<string>().baz<boolean>();
@@ -73,12 +75,14 @@ describe('composite > generics', () => {
 			const m: Extractor = (v) => v.id;
 
 			// 15. Generic in angle after "new" + trailing call
-			class Wrapper<T> {
+			class Wrapper {
 				value: T;
+
 				constructor() {
 					this.value = null as unknown as T;
 				}
-				unwrap<U>() {
+
+				unwrap() {
 					return null as unknown as U;
 				}
 			}
@@ -88,20 +92,22 @@ describe('composite > generics', () => {
 			function getUnknown(): unknown {
 				return new Map<string, number>([['a', 1]]);
 			}
-			getUnknown.factory = function<T>() {
+			getUnknown.factory = function() {
 				return {
-					make<U>() {
+					make: function() {
 						return 2;
-					}
+					},
 				};
 			};
 			const raw = getUnknown();
-			const o = (raw as Map<string, number>).get('a');
+			const o = raw as Map<string, number>.get('a');
 
 			// 17. Generic with comma + trailing less-than comparison on next token
-			class Pair<T1, T2> {
+			class Pair {
 				first: T1;
+
 				second: T2;
+
 				constructor() {
 					this.first = null as unknown as T1;
 					this.second = null as unknown as T2;
@@ -117,18 +123,17 @@ describe('composite > generics', () => {
 			interface Edge<W> {
 				weight: W;
 			}
-			class Graph<N, E> {
+			class Graph {
 				nodes: N[];
+
 				edges: E[];
+
 				constructor() {
 					this.nodes = [];
 					this.edges = [];
 				}
 			}
-			const r = new Graph<
-				Node<string>,
-				Edge<number>
-			>();
+			const r = new Graph<Node<string>, Edge<number>>();
 
 			// 19. Ternary containing generics in both branches
 			let flag = true;
@@ -142,65 +147,59 @@ describe('composite > generics', () => {
 			const u = registry.get<number>('id')?.toString();
 
 			// 22. Generic call used as callee for another call
-			function make<T>() {
+			function make() {
 				return (value: T) => value;
 			}
 			const v = make<number>()(10);
 
 			// 23. Generic followed by tagged template (ensure not confused with JSX)
-			function tagFn<T>(strings: TemplateStringsArray, ...values: T[]) {
+			function tagFn(strings: TemplateStringsArray, ...values) {
 				return values[0];
 			}
-			const tagResult = tagFn<number>`value`;
+			const tagResult = tagFn`value`;
 
 			// 24. Sequence mixing: (a < b) + generic call in same statement
-			function compute<T>(x: T, y: T): T {
+			function compute(x: T, y: T): T {
 				return y;
 			}
 
-			const w = (x < y) && compute<number>(x, y);
-
+			const w = x < y && compute<number>(x, y);
 
 			// Additional component focusing on edge crankers
 
 			// 28. Generic after parenthesized new expression
-			const aa = (new Box<number>()).open<string>();
+			const aa = new Box<number>().open<string>();
 
 			// 29. Generic chain right after closing paren of IIFE
-			class Builder<Kind> {
-				finalize<Result>() {
+			class Builder {
+				finalize() {
 					return {
-						result: null as unknown as Result
+						result: null as unknown as Result,
 					};
 				}
 			}
 			const builder = new Builder<Number>();
-			const result = ((function(){ return builder; })() as Builder<Number>).finalize<boolean>();
+			const result = function() {
+				return builder;
+			}() as Builder<Number>.finalize<boolean>();
 
 			// 30. Angle bracket start of conditional expression line
-			function adjust<T>(value: T): T {
+			function adjust(value: T): T {
 				return value;
 			}
-			const val =
-				new Wrapper<number>()
-					.value < 100
-					? adjust<number>(10)
-					: adjust<number>(20);
-
+			const val = new Wrapper<number>().value < 100 ? adjust<number>(10) : adjust<number>(20);
 
 			// 32. Generic with comments inside angle list
-			class Mapper<Key, Value> {
+			class Mapper {
 				map: Map<Key, Value>;
+
 				constructor() {
 					this.map = new Map<Key, Value>();
 				}
 			}
-			const gg = new Mapper<
-				// key type
-				string,
-				/* value type */
-				number
-			>();
+			const gg = new Mapper<// key type
+			string, /* value type */
+			number>();
 
 			// 33. Map of generic instance as key
 			const mm = new Map<TrackedArray<number>, TrackedArray<string>>();

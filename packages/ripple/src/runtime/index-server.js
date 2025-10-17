@@ -91,5 +91,7 @@ export function MediaQuery(query, matches = false) {
  * @param {any} _
  */
 export function createSubscriber(_) {
-	return () => { /* NO-OP */ };
+	return () => {
+		/* NO-OP */
+	};
 }

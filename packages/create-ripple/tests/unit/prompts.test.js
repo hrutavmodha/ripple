@@ -3,19 +3,19 @@ import * as prompts from 'prompts';
 
 // Mock prompts module
 vi.mock('prompts', () => ({
-	default: vi.fn()
+	default: vi.fn(),
 }));
 
 // Mock kleur colors
 vi.mock('kleur/colors', () => ({
-	red: vi.fn((text) => text)
+	red: vi.fn((text) => text),
 }));
 
 // Mock process.exit
 const mockExit = vi.fn();
 Object.defineProperty(process, 'exit', {
 	value: mockExit,
-	writable: true
+	writable: true,
 });
 
 // Mock console.log
@@ -28,7 +28,7 @@ import {
 	promptPackageManager,
 	promptTypeScript,
 	promptGitInit,
-	promptStylingFramework
+	promptStylingFramework,
 } from '../../src/lib/prompts.js';
 
 describe('Prompts', () => {
@@ -51,7 +51,7 @@ describe('Prompts', () => {
 				name: 'projectName',
 				message: 'What is your project named?',
 				initial: 'my-ripple-app',
-				validate: expect.any(Function)
+				validate: expect.any(Function),
 			});
 		});
 
@@ -61,8 +61,8 @@ describe('Prompts', () => {
 			await promptProjectName('custom-default');
 			expect(prompts.default).toHaveBeenCalledWith(
 				expect.objectContaining({
-					initial: 'custom-default'
-				})
+					initial: 'custom-default',
+				}),
 			);
 		});
 
@@ -83,7 +83,7 @@ describe('Prompts', () => {
 
 			expect(validate('valid-name')).toBe(true);
 			expect(validate('Invalid Name!')).toBe(
-				'Project name can only contain lowercase letters, numbers, hyphens, dots, and underscores'
+				'Project name can only contain lowercase letters, numbers, hyphens, dots, and underscores',
 			);
 		});
 	});
@@ -99,7 +99,7 @@ describe('Prompts', () => {
 				name: 'template',
 				message: 'Which template would you like to use?',
 				choices: expect.any(Array),
-				initial: 0
+				initial: 0,
 			});
 		});
 
@@ -125,9 +125,9 @@ describe('Prompts', () => {
 				choices: [
 					{ title: 'npm', value: 'npm', description: 'Use npm for dependency management' },
 					{ title: 'yarn', value: 'yarn', description: 'Use Yarn for dependency management' },
-					{ title: 'pnpm', value: 'pnpm', description: 'Use pnpm for dependency management' }
+					{ title: 'pnpm', value: 'pnpm', description: 'Use pnpm for dependency management' },
 				],
-				initial: 0
+				initial: 0,
 			});
 		});
 
@@ -149,7 +149,7 @@ describe('Prompts', () => {
 				type: 'confirm',
 				name: 'typescript',
 				message: 'Would you like to use TypeScript?',
-				initial: true
+				initial: true,
 			});
 		});
 
@@ -170,7 +170,7 @@ describe('Prompts', () => {
 				type: 'confirm',
 				name: 'gitInit',
 				message: 'Initialize a new Git repository?',
-				initial: true
+				initial: true,
 			});
 		});
 
@@ -190,7 +190,7 @@ describe('Prompts', () => {
 				type: 'confirm',
 				name: 'gitInit',
 				message: 'Initialize a new Git repository?',
-				initial: true
+				initial: true,
 			});
 		});
 
@@ -211,19 +211,23 @@ describe('Prompts', () => {
 				type: 'select',
 				name: 'stylingFramework',
 				message: 'Which styling framework would you like to integrate with Ripple?',
-				choices: [{
-					title: 'Vanilla CSS',
-					value: 'vanilla',
-					description: 'Use Vanilla CSS for styling your components'
-				}, {
-					title: 'Bootstrap',
-					value: 'bootstrap',
-					description: 'Use Bootstrap classes to style your components'
-				}, {
-					title: 'TailwindCSS',
-					value: 'tailwind',
-					description: 'Use TailwindCSS to style your components'
-				}]
+				choices: [
+					{
+						title: 'Vanilla CSS',
+						value: 'vanilla',
+						description: 'Use Vanilla CSS for styling your components',
+					},
+					{
+						title: 'Bootstrap',
+						value: 'bootstrap',
+						description: 'Use Bootstrap classes to style your components',
+					},
+					{
+						title: 'TailwindCSS',
+						value: 'tailwind',
+						description: 'Use TailwindCSS to style your components',
+					},
+				],
 			});
 		});
 

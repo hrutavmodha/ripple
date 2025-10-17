@@ -34,7 +34,7 @@ export function getTemplateChoices() {
 	return TEMPLATES.map((template) => ({
 		title: template.display,
 		description: template.description,
-		value: template.name
+		value: template.name,
 	}));
 }
 
@@ -68,7 +68,7 @@ export async function downloadTemplate(templateName) {
 	const emitter = degit(repoUrl, {
 		cache: false,
 		force: true,
-		verbose: false
+		verbose: false,
 	});
 
 	try {

@@ -48,11 +48,7 @@ export function parse(source: string): Program;
  * @param options - Compilation options (mode: 'client' or 'server')
  * @returns The compilation result with AST, JS, and CSS
  */
-export function compile(
-	source: string,
-	filename: string,
-	options?: CompileOptions,
-): CompileResult;
+export function compile(source: string, filename: string, options?: CompileOptions): CompileResult;
 
 /**
  * Compile Ripple source to Volar mappings for editor integration
@@ -60,7 +56,4 @@ export function compile(
  * @param filename - The filename for source map generation
  * @returns Volar mappings object for editor integration
  */
-export function compile_to_volar_mappings(
-	source: string,
-	filename: string,
-): VolarMappingsResult;
+export function compile_to_volar_mappings(source: string, filename: string): VolarMappingsResult;

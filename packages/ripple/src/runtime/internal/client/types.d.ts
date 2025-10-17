@@ -19,7 +19,7 @@ export type Dependency = {
 
 export type Tracked<V = any> = {
 	DO_NOT_ACCESS_THIS_OBJECT_DIRECTLY?: true;
-	a: { get?: Function, set?: Function };
+	a: { get?: Function; set?: Function };
 	b: Block;
 	c: number;
 	f: number;
@@ -28,7 +28,7 @@ export type Tracked<V = any> = {
 
 export type Derived = {
 	DO_NOT_ACCESS_THIS_OBJECT_DIRECTLY?: true;
-	a: { get?: Function, set?: Function };
+	a: { get?: Function; set?: Function };
 	b: Block;
 	blocks: null | Block[];
 	c: number;

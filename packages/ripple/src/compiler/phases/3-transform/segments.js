@@ -1,4 +1,4 @@
-	import { walk } from 'zimmerframe';
+import { walk } from 'zimmerframe';
 
 export const mapping_data = {
 	verification: true,
@@ -48,7 +48,7 @@ export function convert_source_map_to_mappings(ast, source, generated_code, sour
 				reverse_capitalized_names.set(node.metadata.ts_name, node.metadata.original_name);
 			}
 			next();
-		}
+		},
 	});
 
 	/**
@@ -226,7 +226,7 @@ export function convert_source_map_to_mappings(ast, source, generated_code, sour
 					import_declarations.push({
 						id: volar_id,
 						// We'll calculate genStart/genEnd later by searching in generated code
-						node: node
+						node: node,
 					});
 				}
 
@@ -248,7 +248,10 @@ export function convert_source_map_to_mappings(ast, source, generated_code, sour
 					visit(node.local);
 				}
 				return;
-			} else if (node.type === 'ImportDefaultSpecifier' || node.type === 'ImportNamespaceSpecifier') {
+			} else if (
+				node.type === 'ImportDefaultSpecifier' ||
+				node.type === 'ImportNamespaceSpecifier'
+			) {
 				// Just visit local
 				if (node.local) {
 					visit(node.local);
@@ -335,7 +338,10 @@ export function convert_source_map_to_mappings(ast, source, generated_code, sour
 				}
 
 				// 3. Push closing tag name (not visited by AST walker)
-				if (!node.openingElement?.selfClosing && node.closingElement?.name?.type === 'JSXIdentifier') {
+				if (
+					!node.openingElement?.selfClosing &&
+					node.closingElement?.name?.type === 'JSXIdentifier'
+				) {
 					const closingName = node.closingElement.name.name;
 					// Check if this was capitalized (reverse lookup)
 					const originalName = reverse_capitalized_names.get(closingName);
@@ -353,7 +359,11 @@ export function convert_source_map_to_mappings(ast, source, generated_code, sour
 				}
 
 				return;
-			} else if (node.type === 'FunctionDeclaration' || node.type === 'FunctionExpression' || node.type === 'ArrowFunctionExpression') {
+			} else if (
+				node.type === 'FunctionDeclaration' ||
+				node.type === 'FunctionExpression' ||
+				node.type === 'ArrowFunctionExpression'
+			) {
 				// Visit in source order: id, params, body
 				if (node.id) {
 					visit(node.id);
@@ -734,7 +744,11 @@ export function convert_source_map_to_mappings(ast, source, generated_code, sour
 					}
 				}
 				return;
-			} else if (node.type === 'JSXClosingElement' || node.type === 'JSXClosingFragment' || node.type === 'JSXOpeningFragment') {
+			} else if (
+				node.type === 'JSXClosingElement' ||
+				node.type === 'JSXClosingFragment' ||
+				node.type === 'JSXOpeningFragment'
+			) {
 				// These are handled by their parent nodes
 				return;
 			} else if (node.type === 'JSXMemberExpression') {
@@ -816,7 +830,10 @@ export function convert_source_map_to_mappings(ast, source, generated_code, sour
 				}
 				// Skip typeAnnotation
 				return;
-			} else if (node.type === 'TSTypeParameterInstantiation' || node.type === 'TSTypeParameterDeclaration') {
+			} else if (
+				node.type === 'TSTypeParameterInstantiation' ||
+				node.type === 'TSTypeParameterDeclaration'
+			) {
 				// Generic type parameters - visit to collect type variable names
 				if (node.params) {
 					for (const param of node.params) {
@@ -941,7 +958,10 @@ export function convert_source_map_to_mappings(ast, source, generated_code, sour
 					visit(node.typeAnnotation);
 				}
 				return;
-			} else if (node.type === 'TSCallSignatureDeclaration' || node.type === 'TSConstructSignatureDeclaration') {
+			} else if (
+				node.type === 'TSCallSignatureDeclaration' ||
+				node.type === 'TSConstructSignatureDeclaration'
+			) {
 				// Call or construct signature
 				if (node.typeParameters) {
 					visit(node.typeParameters);
@@ -1134,7 +1154,22 @@ export function convert_source_map_to_mappings(ast, source, generated_code, sour
 					visit(node.typeAnnotation);
 				}
 				return;
-			} else if (node.type === 'TSAnyKeyword' || node.type === 'TSUnknownKeyword' || node.type === 'TSNumberKeyword' || node.type === 'TSObjectKeyword' || node.type === 'TSBooleanKeyword' || node.type === 'TSBigIntKeyword' || node.type === 'TSStringKeyword' || node.type === 'TSSymbolKeyword' || node.type === 'TSVoidKeyword' || node.type === 'TSUndefinedKeyword' || node.type === 'TSNullKeyword' || node.type === 'TSNeverKeyword' || node.type === 'TSThisType' || node.type === 'TSIntrinsicKeyword') {
+			} else if (
+				node.type === 'TSAnyKeyword' ||
+				node.type === 'TSUnknownKeyword' ||
+				node.type === 'TSNumberKeyword' ||
+				node.type === 'TSObjectKeyword' ||
+				node.type === 'TSBooleanKeyword' ||
+				node.type === 'TSBigIntKeyword' ||
+				node.type === 'TSStringKeyword' ||
+				node.type === 'TSSymbolKeyword' ||
+				node.type === 'TSVoidKeyword' ||
+				node.type === 'TSUndefinedKeyword' ||
+				node.type === 'TSNullKeyword' ||
+				node.type === 'TSNeverKeyword' ||
+				node.type === 'TSThisType' ||
+				node.type === 'TSIntrinsicKeyword'
+			) {
 				// Primitive type keywords - leaf nodes, no children
 				return;
 			} else if (node.type === 'TSDeclareFunction') {
@@ -1176,7 +1211,7 @@ export function convert_source_map_to_mappings(ast, source, generated_code, sour
 			}
 
 			throw new Error(`Unhandled AST node type in mapping walker: ${node.type}`);
-		}
+		},
 	});
 
 	// Process each token in order
@@ -1244,7 +1279,7 @@ export function convert_source_map_to_mappings(ast, source, generated_code, sour
 				lengths: [Math.min(source_length, get_length)],
 				data: {
 					// only verification (diagnostics) to avoid duplicate hover/completion
-					verification: true
+					verification: true,
 				},
 			});
 		}
@@ -1260,11 +1295,11 @@ export function convert_source_map_to_mappings(ast, source, generated_code, sour
 			sourceOffsets: [0],
 			generatedOffsets: [0],
 			lengths: [1],
-				data: {
-					...mapping_data,
-					codeActions: true, // auto-import
-					rename: false, // avoid rename for a “dummy” mapping
-				}
+			data: {
+				...mapping_data,
+				codeActions: true, // auto-import
+				rename: false, // avoid rename for a “dummy” mapping
+			},
 		});
 	}
 

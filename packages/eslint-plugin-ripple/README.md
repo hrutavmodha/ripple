@@ -26,6 +26,7 @@ export default [...ripple.configs.recommended];
 ```
 
 The plugin automatically:
+
 - Detects and uses `eslint-parser-ripple` if installed for `.ripple` files
 - Detects and uses `@typescript-eslint/parser` if installed for `.ts`/`.tsx` files
 - Excludes `.d.ts` files, `node_modules`, `dist`, and `build` directories from linting
@@ -214,14 +215,14 @@ import { get, set } from 'ripple';
 
 export function useCount() {
   const count = track(1);
-  
+
   // Use get() to read tracked values
   const double = derived(() => get(count) * 2);
-  
+
   effect(() => {
-    console.log("count is", get(count));
+    console.log('count is', get(count));
   });
-  
+
   return { count, double };
 }
 ```

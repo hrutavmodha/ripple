@@ -155,7 +155,7 @@ function read_at_rule(parser) {
 		end: parser.index,
 		name,
 		prelude,
-		block
+		block,
 	};
 }
 

@@ -3,19 +3,24 @@ import { track, flushSync, effect } from 'ripple';
 describe('composite > reactivity', () => {
 	it('renders composite components with object state', () => {
 		component Button({ obj }: { obj: { count: Tracked<number> } }) {
-			<button class='count2' onClick={() => {
-				obj.@count++;
-			}}>{obj.@count}</button>
+			<button
+				class="count2"
+				onClick={() => {
+					obj.@count++;
+				}}
+			>
+				{obj.@count}
+			</button>
 		}
 
 		component App() {
 			<div>
 				let obj = {
-					count: track(0)
+					count: track(0),
 				};
 
-				<span class='count'>{obj.@count}</span>
-				<Button obj={obj} />
+				<span class="count">{obj.@count}</span>
+				<Button {obj} />
 			</div>
 		}
 
@@ -32,29 +37,34 @@ describe('composite > reactivity', () => {
 
 	it('renders composite components with object state wrapped in an if statement', () => {
 		component Button({ obj }: { obj: { count: Tracked<number> } }) {
-			<button class='count2' onClick={() => {
-				obj.@count++;
-			}}>{obj.@count}</button>
+			<button
+				class="count2"
+				onClick={() => {
+					obj.@count++;
+				}}
+			>
+				{obj.@count}
+			</button>
 		}
 
 		component OtherComponent({ obj }: { obj: { count: Tracked<number> } }) {
-			<div class='count3'>{obj.@count}</div>
+			<div class="count3">{obj.@count}</div>
 		}
 
 		component App() {
 			<div>
 				let obj = {
-					count: track(0)
+					count: track(0),
 				};
 
-				<span class='count'>{obj.@count}</span>
+				<span class="count">{obj.@count}</span>
 				<span>{' '}</span>
 				if (obj) {
-					<Button obj={obj} />
+					<Button {obj} />
 				}
 
 				if (obj) {
-					<OtherComponent obj={obj} />
+					<OtherComponent {obj} />
 				}
 			</div>
 		}
@@ -74,15 +84,27 @@ describe('composite > reactivity', () => {
 	it('parents and children have isolated state', () => {
 		component Button(props: { count: number }) {
 			let count = track(() => props.count);
-			<button onClick={() => { @count++; } }>{"child: " + @count}</button>
+			<button
+				onClick={() => {
+					@count++;
+				}}
+			>
+				{'child: ' + @count}
+			</button>
 		}
 
 		component App() {
 			<div>
 				let count = track(0);
 
-				<button onClick={() => { @count++; } }>{"parent: " + @count}</button>
-				<Button {@count} />
+				<button
+					onClick={() => {
+						@count++;
+					}}
+				>
+					{'parent: ' + @count}
+				</button>
+				<Button {count} />
 			</div>
 		}
 
@@ -107,17 +129,29 @@ describe('composite > reactivity', () => {
 	});
 
 	it('parents and children have isolated connected state (destructured props)', () => {
-		component Button({count}: { count: number }) {
+		component Button({ count }: { count: number }) {
 			let local_count = track(() => count);
-			<button onClick={() => { @local_count++; } }>{"child: " + @local_count}</button>
+			<button
+				onClick={() => {
+					@local_count++;
+				}}
+			>
+				{'child: ' + @local_count}
+			</button>
 		}
 
 		component App() {
 			<div>
 				let count = track(0);
 
-				<button onClick={() => { @count++; } }>{"parent: " + @count}</button>
-				<Button {@count} />
+				<button
+					onClick={() => {
+						@count++;
+					}}
+				>
+					{'parent: ' + @count}
+				</button>
+				<Button {count} />
 			</div>
 		}
 
@@ -157,7 +191,15 @@ describe('composite > reactivity', () => {
 
 			<Child {...@obj} />
 
-			<button onClick={() => { @a++; @b++; @c++; }}>{"Increment all"}</button>
+			<button
+				onClick={() => {
+					@a++;
+					@b++;
+					@c++;
+				}}
+			>
+				{'Increment all'}
+			</button>
 		}
 
 		component Child({ a, b, c }: { a: number; b: number; c: number }) {
@@ -165,7 +207,7 @@ describe('composite > reactivity', () => {
 				logs.push(`Child effect: ${a}, ${b}, ${c}`);
 			});
 
-			<div>{a + ' ' +  b + ' ' + c}</div>
+			<div>{a + ' ' + b + ' ' + c}</div>
 		}
 
 		render(App);

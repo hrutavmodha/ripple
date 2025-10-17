@@ -8,7 +8,7 @@ import {
 	promptTemplate,
 	promptPackageManager,
 	promptGitInit,
-	promptStylingFramework
+	promptStylingFramework,
 } from '../lib/prompts.js';
 import { createProject } from '../lib/project-creator.js';
 import { isFolderEmpty } from '../lib/is-folder-empty.js';
@@ -97,7 +97,7 @@ export async function createCommand(projectName, options) {
 			packageManager,
 			typescript: true,
 			gitInit,
-			stylingFramework
+			stylingFramework,
 		});
 
 		showNextSteps(projectPath, packageManager);
@@ -139,7 +139,7 @@ function getInstallCommand(packageManager) {
 	const commands = {
 		npm: 'npm install',
 		yarn: 'yarn install',
-		pnpm: 'pnpm install'
+		pnpm: 'pnpm install',
 	};
 	return commands[packageManager] || 'npm install';
 }
@@ -153,7 +153,7 @@ function getDevCommand(packageManager) {
 	const commands = {
 		npm: 'npm run dev',
 		yarn: 'yarn dev',
-		pnpm: 'pnpm dev'
+		pnpm: 'pnpm dev',
 	};
 	return commands[packageManager] || 'npm run dev';
 }

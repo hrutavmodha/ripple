@@ -35,8 +35,8 @@ describe('TrackedArray > static', () => {
 		expect(container.querySelectorAll('pre')[1].textContent).toBe('[4,5,6,7]');
 	});
 
-	('fromAsync' in Array.prototype ? describe : describe.skip)('TrackedArray fromAsync', async () => {
-		it('handles static fromAsync method with reactivity', async () => {
+	'fromAsync' in Array.prototype ? describe : describe.skip('TrackedArray fromAsync', () => {
+		it('handles static fromAsync method with reactivity', () => {
 			component Parent() {
 				try {
 					<ArrayTest />
@@ -48,16 +48,20 @@ describe('TrackedArray > static', () => {
 			component ArrayTest() {
 				let items = await TrackedArray.fromAsync([1, 2, 3]);
 
-				<button onClick={() => {
-					if (items) items.push(4);
-				}}>{'add item'}</button>
+				<button
+					onClick={() => {
+						if (items) items.push(4);
+					}}
+				>
+					{'add item'}
+				</button>
 
 				<pre>{JSON.stringify(items)}</pre>
 			}
 
 			render(Parent);
 
-			await new Promise(resolve => setTimeout(resolve, 0));
+			await new Promise((resolve) => setTimeout(resolve, 0));
 			flushSync();
 
 			const addButton = container.querySelector('button');
@@ -71,7 +75,7 @@ describe('TrackedArray > static', () => {
 			expect(container.querySelectorAll('pre')[1].textContent).toBe('[1,2,3,4]');
 		});
 
-		it('handles static fromAsync method with mapping function', async () => {
+		it('handles static fromAsync method with mapping function', () => {
 			component Parent() {
 				try {
 					<ArrayTest />
@@ -81,20 +85,21 @@ describe('TrackedArray > static', () => {
 			}
 
 			component ArrayTest() {
-				let items = await TrackedArray.fromAsync(
-					[1, 2, 3],
-					(x: number) => x * 2
-				);
+				let items = await TrackedArray.fromAsync([1, 2, 3], (x: number) => x * 2);
 
-				<button onClick={() => {
-					if (items) items.push(8);
-				}}>{'add item'}</button>
+				<button
+					onClick={() => {
+						if (items) items.push(8);
+					}}
+				>
+					{'add item'}
+				</button>
 				<pre>{items ? JSON.stringify(items) : 'Loading...'}</pre>
 			}
 
 			render(Parent);
 
-			await new Promise(resolve => setTimeout(resolve, 0));
+			await new Promise((resolve) => setTimeout(resolve, 0));
 			flushSync();
 
 			const addButton = container.querySelector('button');
@@ -108,7 +113,7 @@ describe('TrackedArray > static', () => {
 		});
 
 		// TODO: Fix this test case, needs some async love around try statements being using in a not template way
-		it.skip('handles error in fromAsync method', async () => {
+		it.skip('handles error in fromAsync method', () => {
 			component Parent() {
 				try {
 					<ArrayTest />
@@ -120,12 +125,11 @@ describe('TrackedArray > static', () => {
 			component ArrayTest() {
 				let items = null;
 				let error = null;
-
-				// try {
-				// 	items = await TrackedArray.fromAsync(Promise.reject(new Error('Async error')));
-				// } catch (e) {
-				// }
 			}
+			// try {
+			// 	items = await TrackedArray.fromAsync(Promise.reject(new Error('Async error')));
+			// } catch (e) {
+			// }
 
 			component ArrayTest() {
 				let items = null;
@@ -134,7 +138,7 @@ describe('TrackedArray > static', () => {
 				try {
 					// items = await TrackedArray.fromAsync(Promise.reject(new Error('Async error')));
 				} catch (e) {
-					error = (e as Error).message;
+					error = e as Error.message;
 				}
 
 				<pre>{error ? 'Error: ' + error : 'No error'}</pre>
@@ -143,7 +147,7 @@ describe('TrackedArray > static', () => {
 
 			render(Parent);
 
-			await new Promise(resolve => setTimeout(resolve, 0));
+			await new Promise((resolve) => setTimeout(resolve, 0));
 			flushSync();
 
 			expect(container.querySelectorAll('pre')[0].textContent).toBe('Error: Async error');
@@ -172,7 +176,7 @@ describe('TrackedArray > static', () => {
 				try {
 					new TrackedArray(MAX_ARRAY_LENGTH + 1);
 				} catch (e) {
-					error = (e as Error).message;
+					error = e as Error.message;
 				}
 
 				<pre>{error}</pre>
@@ -209,7 +213,7 @@ describe('TrackedArray > static', () => {
 			expect(container.querySelectorAll('pre')[1].textContent).toBe('1');
 		});
 
-		('fromAsync' in Array.prototype ? it : it.skip)('specifies int using static fromAsync method', async () => {
+		'fromAsync' in Array.prototype ? it : it.skip('specifies int using static fromAsync method', () => {
 			component Parent() {
 				try {
 					<ArrayTest />
@@ -227,7 +231,7 @@ describe('TrackedArray > static', () => {
 
 			render(Parent);
 
-			await new Promise(resolve => setTimeout(resolve, 0));
+			await new Promise((resolve) => setTimeout(resolve, 0));
 			flushSync();
 
 			expect(container.querySelectorAll('pre')[0].textContent).toBe('[6]');

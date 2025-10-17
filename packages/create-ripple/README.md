@@ -35,7 +35,9 @@ npx create-ripple my-app
 ## Templates
 
 ### Basic
+
 A minimal Ripple application with:
+
 - Vite for development and building
 - TypeScript support
 - Prettier for code formatting

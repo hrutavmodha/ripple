@@ -243,10 +243,14 @@ describe('TrackedURLSearchParams > mutation', () => {
 			const url = new TrackedURL('https://example.com?foo=bar&baz=qux');
 			const params = url.searchParams;
 
-			<button onClick={() => {
-				params.delete('foo');
-				params.delete('baz');
-			}}>{'clear all'}</button>
+			<button
+				onClick={() => {
+					params.delete('foo');
+					params.delete('baz');
+				}}
+			>
+				{'clear all'}
+			</button>
 			<pre>{url.href}</pre>
 			<pre>{params.size}</pre>
 		}
@@ -271,14 +275,18 @@ describe('TrackedURLSearchParams > mutation', () => {
 		component URLTest() {
 			const params = new TrackedURLSearchParams();
 
-			<button onClick={() => {
-				params.append('a', '1');
-				params.append('b', '2');
-				params.set('a', '10');
-				params.delete('b');
-				params.append('c', '3');
-				params.sort();
-			}}>{'complex operations'}</button>
+			<button
+				onClick={() => {
+					params.append('a', '1');
+					params.append('b', '2');
+					params.set('a', '10');
+					params.delete('b');
+					params.append('c', '3');
+					params.sort();
+				}}
+			>
+				{'complex operations'}
+			</button>
 			<pre>{params.toString()}</pre>
 			<pre>{params.size}</pre>
 		}

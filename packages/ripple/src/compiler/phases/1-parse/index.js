@@ -33,7 +33,8 @@ function isWhitespaceTextNode(node) {
 	if (!node || node.type !== 'Text') {
 		return false;
 	}
-	const value = typeof node.value === 'string' ? node.value : typeof node.raw === 'string' ? node.raw : '';
+	const value =
+		typeof node.value === 'string' ? node.value : typeof node.raw === 'string' ? node.raw : '';
 	return /^\s*$/.test(value);
 }
 
@@ -64,7 +65,9 @@ function RipplePlugin(config) {
 				}
 
 				const children = Array.isArray(container.children) ? container.children : [];
-				const hasMeaningfulChildren = children.some((child) => child && !isWhitespaceTextNode(child));
+				const hasMeaningfulChildren = children.some(
+					(child) => child && !isWhitespaceTextNode(child),
+				);
 
 				if (hasMeaningfulChildren) {
 					return null;
@@ -1717,25 +1720,37 @@ function get_comment_handlers(source, comments, index = 0) {
 
 			comments = comments
 				.filter((comment) => comment.start >= index)
-				.map(({ type, value, start, end, loc, context }) => ({ type, value, start, end, loc, context }));
+				.map(({ type, value, start, end, loc, context }) => ({
+					type,
+					value,
+					start,
+					end,
+					loc,
+					context,
+				}));
 
 			walk(ast, null, {
 				_(node, { next, path }) {
 					let comment;
 
-						const metadata = /** @type {{ commentContainerId?: number, elementLeadingComments?: CommentWithLocation[] }} */ (node?.metadata);
+					const metadata =
+						/** @type {{ commentContainerId?: number, elementLeadingComments?: CommentWithLocation[] }} */ (
+							node?.metadata
+						);
 
-						if (metadata && metadata.commentContainerId !== undefined) {
-							while (
-								comments[0] &&
-								comments[0].context &&
-								comments[0].context.containerId === metadata.commentContainerId &&
-								comments[0].context.beforeMeaningfulChild
-							) {
-								const elementComment = /** @type {CommentWithLocation & { context?: any }} */ (comments.shift());
-								(metadata.elementLeadingComments ||= []).push(elementComment);
-							}
+					if (metadata && metadata.commentContainerId !== undefined) {
+						while (
+							comments[0] &&
+							comments[0].context &&
+							comments[0].context.containerId === metadata.commentContainerId &&
+							comments[0].context.beforeMeaningfulChild
+						) {
+							const elementComment = /** @type {CommentWithLocation & { context?: any }} */ (
+								comments.shift()
+							);
+							(metadata.elementLeadingComments ||= []).push(elementComment);
 						}
+					}
 
 					while (comments[0] && comments[0].start < node.start) {
 						comment = /** @type {CommentWithLocation} */ (comments.shift());
@@ -1744,7 +1759,9 @@ function get_comment_handlers(source, comments, index = 0) {
 								.filter((ancestor) => ancestor && ancestor.type === 'Element' && ancestor.loc)
 								.sort((a, b) => a.loc.start.line - b.loc.start.line);
 
-							const targetAncestor = ancestorElements.find((ancestor) => comment.loc.start.line < ancestor.loc.start.line);
+							const targetAncestor = ancestorElements.find(
+								(ancestor) => comment.loc.start.line < ancestor.loc.start.line,
+							);
 
 							if (targetAncestor) {
 								targetAncestor.metadata ??= {};

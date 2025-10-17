@@ -1,3 +1,3 @@
 declare module 'vite-plugin-ripple' {
-  export function ripple(): any
+	export function ripple(): any;
 }

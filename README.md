@@ -40,14 +40,18 @@ TypeScript and JSX, but with a few interesting touches. In my experience, this h
 - **SSR**: Ripple is currently an SPA only. It will have SSR soon! Hydration to follow after.
 
 ## 🚀 Try Ripple Now
+
 You can explore Ripple in several ways:
 
-### 🧩 Online Playground  
+### 🧩 Online Playground
+
 Jump into our [**Playground**](https://www.ripplejs.com/playground) to explore interactive examples and real-world use cases.
 
-### ⚡ Quick Start with Vite Template  
+### ⚡ Quick Start with Vite Template
+
 Spin up a Ripple project instantly using our basic Vite template on [**StackBlitz**](https://stackblitz.com/github/trueadm/ripple/tree/main/templates/basic),  
 or run the following commands in your terminal:
+
 > Note: Syntax highlighting will be added soon – once StackBlitz integration is finalized.
 
 ```bash
@@ -58,12 +62,17 @@ npm run dev   # or yarn dev / pnpm dev
 ```
 
 ### 🛠️ Use the Create Ripple CLI
+
 For more options (like Tailwind CSS or Bootstrap setup), use the interactive CLI:
+
 ```bash
 npx create-ripple    # or yarn create ripple / pnpm create ripple
 ```
+
 ### 📦 Install Ripple Directly
+
 To use Ripple in an existing project, install it from npm:
+
 ```bash
 npm install ripple    # or yarn add ripple / pnpm add ripple
 ```
@@ -615,18 +624,18 @@ Switch statements let you conditionally render content based on a value. They wo
 ```ripple
 component StatusIndicator({ status }) {
   switch (status) {
-    case 'loading':
-      <p>{'Loading...'}</p>
-      break;
-    case 'success':
-      <p>{'Success!'}</p>
-      break;
-    case 'error':
-      <p>{'Error!'}</p>
-      break;
-    default:
-      <p>{'Unknown status'}</p>
-  }  
+case 'loading':
+  <p>{'Loading...'}</p>
+  break;
+case 'success':
+  <p>{'Success!'}</p>
+  break;
+case 'error':
+  <p>{'Error!'}</p>
+  break;
+default:
+  <p>{'Unknown status'}</p>
+}
 }
 ```
 
@@ -642,18 +651,18 @@ component InteractiveStatus() {
   <button onClick={() => @status = 'error'}>{'Error'}</button>
 
   switch (@status) {
-    case 'loading':
-      <p>{'Loading...'}</p>
-      break;
-    case 'success':
-      <p>{'Success!'}</p>
-      break;
-    case 'error':
-      <p>{'Error!'}</p>
-      break;
-    default:
-      <p>{'Unknown status'}</p>
-  }
+case 'loading':
+  <p>{'Loading...'}</p>
+  break;
+case 'success':
+  <p>{'Success!'}</p>
+  break;
+case 'error':
+  <p>{'Error!'}</p>
+  break;
+default:
+  <p>{'Unknown status'}</p>
+}
 }
 ```
 

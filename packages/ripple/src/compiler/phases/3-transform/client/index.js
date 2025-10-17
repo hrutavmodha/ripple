@@ -384,7 +384,7 @@ const visitors = {
 
 	TrackedArrayExpression(node, context) {
 		if (context.state.to_ts) {
-			const arrayAlias = import_from_ripple_if_needed("TrackedArray", context);
+			const arrayAlias = import_from_ripple_if_needed('TrackedArray', context);
 
 			return b.call(
 				b.member(b.id(arrayAlias), b.id('from')),
@@ -401,12 +401,9 @@ const visitors = {
 
 	TrackedObjectExpression(node, context) {
 		if (context.state.to_ts) {
-			const objectAlias = import_from_ripple_if_needed("TrackedObject", context);
+			const objectAlias = import_from_ripple_if_needed('TrackedObject', context);
 
-			return b.new(
-				b.id(objectAlias),
-				b.object(node.properties.map((prop) => context.visit(prop))),
-			);
+			return b.new(b.id(objectAlias), b.object(node.properties.map((prop) => context.visit(prop))));
 		}
 
 		return b.call(
@@ -1647,9 +1644,7 @@ function transform_ts_child(node, context) {
 				const createRefKeyAlias = import_from_ripple_if_needed('createRefKey', context);
 				const metadata = { await: false };
 				const argument = visit(attr.argument, { ...state, metadata });
-				const wrapper = b.object(
-					[b.prop('init', b.call(createRefKeyAlias), argument, true)]
-				);
+				const wrapper = b.object([b.prop('init', b.call(createRefKeyAlias), argument, true)]);
 				return b.jsx_spread_attribute(wrapper);
 			}
 		});
@@ -2097,7 +2092,7 @@ function create_tsx_with_typescript_support() {
 			} else {
 				context.visit(node.body);
 			}
-		}
+		},
 	};
 }
 
@@ -2113,7 +2108,12 @@ export function transform_client(filename, source, analysis, to_ts) {
 	const ripple_user_imports = new Map(); // exported -> local
 	if (analysis && analysis.ast && Array.isArray(analysis.ast.body)) {
 		for (const stmt of analysis.ast.body) {
-			if (stmt && stmt.type === 'ImportDeclaration' && stmt.source && stmt.source.value === 'ripple') {
+			if (
+				stmt &&
+				stmt.type === 'ImportDeclaration' &&
+				stmt.source &&
+				stmt.source.value === 'ripple'
+			) {
 				for (const spec of stmt.specifiers || []) {
 					if (spec.type === 'ImportSpecifier' && spec.imported && spec.local) {
 						ripple_user_imports.set(spec.imported.name, spec.local.name);

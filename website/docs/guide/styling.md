@@ -82,6 +82,6 @@ When passing an object to the `style` attribute, you can use either camelCase or
 ## Global Styles
 
 At the moment, marking styles as global within components isn’t supported yet
-(though a `:global` selector is in the works). As a temporary  workaround, you
+(though a `:global` selector is in the works). As a temporary workaround, you
 can either use a `<style>` tag within `<head>` inside `index.html`, or import
 your CSS with Vite.

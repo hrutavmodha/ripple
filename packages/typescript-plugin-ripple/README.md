@@ -29,6 +29,7 @@ For editors that don't use the Ripple language server (like WebStorm, Sublime Te
 ## What it does
 
 This plugin:
+
 - Registers `.ripple` files as a recognized TypeScript language
 - Transforms Ripple syntax to TypeScript for type checking
 - Integrates with Volar for virtual code generation and source mapping

@@ -64,9 +64,10 @@ function getRippleLanguagePlugin() {
 		 * @param {ScriptId} fileNameOrUri
 		 */
 		getLanguageId(fileNameOrUri) {
-			const file_name = typeof fileNameOrUri === 'string'
-				? fileNameOrUri
-				: fileNameOrUri.fsPath.replace(/\\/g, '/');
+			const file_name =
+				typeof fileNameOrUri === 'string'
+					? fileNameOrUri
+					: fileNameOrUri.fsPath.replace(/\\/g, '/');
 			if (file_name.endsWith('.ripple')) {
 				log('Identified Ripple file:', file_name);
 				return 'ripple';
@@ -80,9 +81,10 @@ function getRippleLanguagePlugin() {
 		 */
 		createVirtualCode(fileNameOrUri, languageId, snapshot) {
 			if (languageId === 'ripple') {
-				const file_name = typeof fileNameOrUri === 'string'
-					? fileNameOrUri
-					: fileNameOrUri.fsPath.replace(/\\/g, '/');
+				const file_name =
+					typeof fileNameOrUri === 'string'
+						? fileNameOrUri
+						: fileNameOrUri.fsPath.replace(/\\/g, '/');
 				const ripple = getRippleForFile(file_name);
 				if (!ripple) {
 					logError(`Ripple compiler not found for file: ${file_name}`);
@@ -137,8 +139,7 @@ function getRippleLanguagePlugin() {
 				if (fs.existsSync(full_path)) {
 					path2RipplePathMap.set(dir, full_path);
 					log('Found ripple compiler at:', full_path);
-				}
-				else {
+				} else {
 					path2RipplePathMap.set(dir, null);
 				}
 			}
@@ -313,6 +314,11 @@ const resolveConfig = (config) => {
 		options.target = ts.ScriptTarget.ESNext;
 	}
 
+	// Ensure JSX is always preserved for language service features
+	if (options.jsx === undefined) {
+		options.jsx = ts.JsxEmit.Preserve;
+	}
+
 	/** @param {string} libName */
 	const normalizeLibName = (libName) => {
 		if (typeof libName !== 'string' || libName.length === 0) {
@@ -326,9 +332,7 @@ const resolveConfig = (config) => {
 	};
 
 	const normalizedLibs = new Set(
-		(options.lib ?? [])
-			.map(normalizeLibName)
-			.filter((lib) => typeof lib === 'string'),
+		(options.lib ?? []).map(normalizeLibName).filter((lib) => typeof lib === 'string'),
 	);
 
 	if (normalizedLibs.size === 0) {

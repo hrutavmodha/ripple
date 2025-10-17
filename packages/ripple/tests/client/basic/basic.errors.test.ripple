@@ -12,16 +12,16 @@ describe('basic client > errors', () => {
 					throw new Error('Test error');
 				} catch (e) {
 					@hasError = true;
-					@errorMessage = (e as Error).message;
+					@errorMessage = e as Error.message;
 				}
 			};
 
 			<div>
 				<button onClick={triggerError}>{'Trigger Error'}</button>
 				if (@hasError) {
-					<div class='error'>{'Error caught: ' + @errorMessage}</div>
+					<div class="error">{'Error caught: ' + @errorMessage}</div>
 				} else {
-					<div class='success'>{'No error'}</div>
+					<div class="success">{'No error'}</div>
 				}
 			</div>
 		}
@@ -69,7 +69,7 @@ describe('basic client > errors', () => {
 				try {
 					@count *= 2;
 				} catch (e) {
-					error = (e as Error).message;
+					error = e as Error.message;
 				}
 			});
 
@@ -91,7 +91,7 @@ describe('basic client > errors', () => {
 						@count *= 2;
 					});
 				} catch (e) {
-					error = (e as Error).message;
+					error = e as Error.message;
 				}
 			});
 
@@ -103,7 +103,7 @@ describe('basic client > errors', () => {
 		expect(error).toBe('Assignments or updates to tracked values are not allowed during computed "track(() => ...)" evaluation');
 	});
 
-	it("errors on mutating a tracked variable in track() getter", () => {
+	it('errors on mutating a tracked variable in track() getter', () => {
 		component Basic() {
 			let count = track(0);
 
@@ -111,7 +111,7 @@ describe('basic client > errors', () => {
 				try {
 					@count += 1;
 				} catch (e) {
-					error = (e as Error).message;
+					error = e as Error.message;
 				}
 				return value;
 			});

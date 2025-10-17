@@ -36,6 +36,7 @@ For significant new features or substantial changes, we encourage discussion bef
 ### Current Focus
 
 Ripple is in early alpha, so our priorities are:
+
 1. Stabilizing core functionality
 2. Improving TypeScript integration (note that the internal codebase is still being migrated from JS, so some TypeScript errors are expected)
 3. Expanding test coverage
@@ -63,6 +64,7 @@ When [opening a new issue](https://github.com/trueadm/ripple/issues/new), please
 - **Minimal example**: If possible, create a minimal reproduction case that demonstrates the problem.
 
 **Important guidelines:**
+
 - Report one bug per issue
 - Be as specific as possible
 - Include code samples when relevant
@@ -123,6 +125,7 @@ Before submitting:
 5. **Keep it focused**: One feature or fix per PR
 
 Include in your PR description:
+
 - Summary of changes
 - Testing performed
 - Any breaking changes
@@ -133,6 +136,7 @@ Include in your PR description:
 ### Code Conventions
 
 Since Ripple is TypeScript-first:
+
 - Prioritize type safety
 - Use descriptive names for variables and functions
 - Follow existing patterns in the codebase

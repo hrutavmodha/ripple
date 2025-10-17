@@ -352,7 +352,7 @@ export function build_hoisted_params(node, context) {
 		}
 	} else {
 		for (const param of node.params) {
-			params.push(/** @type {Pattern} */(context.visit(param)));
+			params.push(/** @type {Pattern} */ (context.visit(param)));
 		}
 	}
 
@@ -554,7 +554,7 @@ export function is_ripple_import(callee, context) {
  * @returns {boolean}
  */
 export function is_declared_function_within_component(node, context) {
-	const component = context.path?.find(/** @param {RippleNode} n */(n) => n.type === 'Component');
+	const component = context.path?.find(/** @param {RippleNode} n */ (n) => n.type === 'Component');
 
 	if (node.type === 'Identifier' && component) {
 		const binding = context.state.scope.get(node.name);
@@ -611,8 +611,8 @@ export function visit_assignment_expression(node, context, build_assignment) {
 				assignment ??
 				b.assignment(
 					'=',
-					/** @type {Pattern} */(context.visit(path.node)),
-					/** @type {Expression} */(context.visit(value)),
+					/** @type {Pattern} */ (context.visit(path.node)),
+					/** @type {Expression} */ (context.visit(value)),
 				)
 			);
 		});
@@ -702,8 +702,8 @@ export function build_assignment(operator, left, right, context) {
 			object,
 			b.assignment(
 				operator,
-				/** @type {Pattern} */(context.visit(left)),
-				/** @type {Expression} */(context.visit(right)),
+				/** @type {Pattern} */ (context.visit(left)),
+				/** @type {Expression} */ (context.visit(right)),
 			),
 		);
 	}

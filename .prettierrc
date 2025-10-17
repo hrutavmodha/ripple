@@ -1,29 +1,22 @@
 {
-  "useTabs": true,
-  "tabWidth": 2,
-  "singleQuote": true,
-  "printWidth": 100,
-  "plugins": [
-    "prettier-plugin-ripple"
-  ],
-  "overrides": [
-    {
-      "files": [
-        "*.ripple"
-      ],
-      "options": {
-        "bracketSameLine": false,
-        "parser": "ripple"
-      }
-    },
-    {
-      "files": [
-        "**/*.md",
-        "**/*.json"
-      ],
-      "options": {
-        "useTabs": false
-      }
-    }
-  ]
+	"useTabs": true,
+	"tabWidth": 2,
+	"singleQuote": true,
+	"printWidth": 100,
+	"plugins": ["prettier-plugin-ripple"],
+	"overrides": [
+		{
+			"files": ["*.ripple"],
+			"options": {
+				"bracketSameLine": false,
+				"parser": "ripple"
+			}
+		},
+		{
+			"files": ["**/*.md", "**/*.json"],
+			"options": {
+				"useTabs": false
+			}
+		}
+	]
 }

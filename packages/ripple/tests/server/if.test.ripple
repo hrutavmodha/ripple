@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render } from 'ripple/server';
 
 describe('if statements in SSR', () => {
-	it('renders if block when condition is true', async () => {
+	it('renders if block when condition is true', () => {
 		component App() {
 			let condition = true;
 
@@ -15,7 +15,7 @@ describe('if statements in SSR', () => {
 		expect(body).toBe('<div>If block</div>');
 	});
 
-	it('renders else block when condition is false', async () => {
+	it('renders else block when condition is false', () => {
 		component App() {
 			let condition = false;
 
@@ -30,7 +30,7 @@ describe('if statements in SSR', () => {
 		expect(body).toBe('<div>Else block</div>');
 	});
 
-	it('renders else if block when condition is true', async () => {
+	it('renders else if block when condition is true', () => {
 		component App() {
 			let value = 'b';
 
@@ -47,7 +47,7 @@ describe('if statements in SSR', () => {
 		expect(body).toBe('<div>Case B</div>');
 	});
 
-	it('renders final else block in an if-else if-else chain', async () => {
+	it('renders final else block in an if-else if-else chain', () => {
 		component App() {
 			let value = 'c';
 
@@ -64,7 +64,7 @@ describe('if statements in SSR', () => {
 		expect(body).toBe('<div>Default Case</div>');
 	});
 
-	it('renders nested if-else blocks correctly', async () => {
+	it('renders nested if-else blocks correctly', () => {
 		component App() {
 			let outer = true;
 			let inner = false;

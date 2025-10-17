@@ -150,4 +150,3 @@ ruleTester.run('no-introspect-in-modules', rule, {
 		},
 	],
 });
-

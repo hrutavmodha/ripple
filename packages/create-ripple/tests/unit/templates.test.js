@@ -7,7 +7,7 @@ import {
 	validateTemplate,
 	getLocalTemplatePath,
 	isLocalDevelopment,
-	downloadTemplate
+	downloadTemplate,
 } from '../../src/lib/templates.js';
 
 // Mock the constants
@@ -16,15 +16,15 @@ vi.mock('../../src/constants.js', () => ({
 		{
 			name: 'basic',
 			display: 'Basic Ripple App',
-			description: 'A minimal Ripple application with Vite and TypeScript'
+			description: 'A minimal Ripple application with Vite and TypeScript',
 		},
 		{
 			name: 'advanced',
 			display: 'Advanced Ripple App',
-			description: 'A full-featured Ripple application'
-		}
+			description: 'A full-featured Ripple application',
+		},
 	],
-	TEMPLATES_DIR: '/mock/templates'
+	TEMPLATES_DIR: '/mock/templates',
 }));
 
 // Mock fs.existsSync - ensure consistent behavior across environments
@@ -32,9 +32,9 @@ vi.mock('node:fs', () => {
 	const mockFn = vi.fn();
 	return {
 		default: {
-			existsSync: mockFn
+			existsSync: mockFn,
 		},
-		existsSync: mockFn
+		existsSync: mockFn,
 	};
 });
 
@@ -44,7 +44,7 @@ describe('getTemplate', () => {
 		expect(template).toEqual({
 			name: 'basic',
 			display: 'Basic Ripple App',
-			description: 'A minimal Ripple application with Vite and TypeScript'
+			description: 'A minimal Ripple application with Vite and TypeScript',
 		});
 	});
 
@@ -78,13 +78,13 @@ describe('getTemplateChoices', () => {
 			{
 				title: 'Basic Ripple App',
 				description: 'A minimal Ripple application with Vite and TypeScript',
-				value: 'basic'
+				value: 'basic',
 			},
 			{
 				title: 'Advanced Ripple App',
 				description: 'A full-featured Ripple application',
-				value: 'advanced'
-			}
+				value: 'advanced',
+			},
 		]);
 	});
 

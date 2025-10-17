@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
 	define: {
-		'import.meta.env.TEST': process.env.VITEST ? 'true' : 'false'
+		'import.meta.env.TEST': process.env.VITEST ? 'true' : 'false',
 	},
 
 	build: {

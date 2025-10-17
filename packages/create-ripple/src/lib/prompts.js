@@ -17,7 +17,7 @@ export async function promptProjectName(defaultName = 'my-ripple-app') {
 		validate: (value) => {
 			const validation = validateProjectName(value);
 			return validation.valid || validation.message;
-		}
+		},
 	});
 
 	if (!response.projectName) {
@@ -38,7 +38,7 @@ export async function promptTemplate() {
 		name: 'template',
 		message: 'Which template would you like to use?',
 		choices: getTemplateChoices(),
-		initial: 0
+		initial: 0,
 	});
 
 	if (!response.template) {
@@ -61,9 +61,9 @@ export async function promptPackageManager() {
 		choices: [
 			{ title: 'npm', value: 'npm', description: 'Use npm for dependency management' },
 			{ title: 'yarn', value: 'yarn', description: 'Use Yarn for dependency management' },
-			{ title: 'pnpm', value: 'pnpm', description: 'Use pnpm for dependency management' }
+			{ title: 'pnpm', value: 'pnpm', description: 'Use pnpm for dependency management' },
 		],
-		initial: 0
+		initial: 0,
 	});
 
 	if (!response.packageManager) {
@@ -83,7 +83,7 @@ export async function promptTypeScript() {
 		type: 'confirm',
 		name: 'typescript',
 		message: 'Would you like to use TypeScript?',
-		initial: true
+		initial: true,
 	});
 
 	if (response.typescript === undefined) {
@@ -103,7 +103,7 @@ export async function promptGitInit() {
 		type: 'confirm',
 		name: 'gitInit',
 		message: 'Initialize a new Git repository?',
-		initial: true
+		initial: true,
 	});
 
 	if (response.gitInit === undefined) {
@@ -119,20 +119,24 @@ export async function promptStylingFramework() {
 		type: 'select',
 		name: 'stylingFramework',
 		message: 'Which styling framework would you like to integrate with Ripple?',
-		choices: [{
-			title: 'Vanilla CSS',
-			value: 'vanilla',
-			description: 'Use Vanilla CSS for styling your components'
-		}, {
-			title: 'Bootstrap',
-			value: 'bootstrap',
-			description: 'Use Bootstrap classes to style your components'
-		}, {
-			title: 'TailwindCSS',
-			value: 'tailwind',
-			description: 'Use TailwindCSS to style your components'
-		}]
-	})
+		choices: [
+			{
+				title: 'Vanilla CSS',
+				value: 'vanilla',
+				description: 'Use Vanilla CSS for styling your components',
+			},
+			{
+				title: 'Bootstrap',
+				value: 'bootstrap',
+				description: 'Use Bootstrap classes to style your components',
+			},
+			{
+				title: 'TailwindCSS',
+				value: 'tailwind',
+				description: 'Use TailwindCSS to style your components',
+			},
+		],
+	});
 
 	if (response.stylingFramework === undefined) {
 		console.log(red('✖ Operation cancelled'));

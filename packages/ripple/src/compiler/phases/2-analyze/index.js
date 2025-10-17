@@ -109,7 +109,7 @@ const visitors = {
 		const parent = context.path.at(-1);
 
 		if (
-			is_reference(node, /** @type {Node} */(parent)) &&
+			is_reference(node, /** @type {Node} */ (parent)) &&
 			binding &&
 			context.state.inside_server_block &&
 			context.state.scope.server_block
@@ -144,7 +144,7 @@ const visitors = {
 		}
 
 		if (
-			is_reference(node, /** @type {Node} */(parent)) &&
+			is_reference(node, /** @type {Node} */ (parent)) &&
 			node.tracked &&
 			binding?.node !== node
 		) {
@@ -155,7 +155,7 @@ const visitors = {
 		}
 
 		if (
-			is_reference(node, /** @type {Node} */(parent)) &&
+			is_reference(node, /** @type {Node} */ (parent)) &&
 			node.tracked &&
 			binding?.node !== node
 		) {
@@ -177,12 +177,16 @@ const visitors = {
 		if (node.object.type === 'Identifier' && !node.object.tracked) {
 			const binding = context.state.scope.get(node.object.name);
 
-			if (binding !== null && binding.initial?.type === 'CallExpression' && is_ripple_track_call(binding.initial.callee, context)) {
+			if (
+				binding !== null &&
+				binding.initial?.type === 'CallExpression' &&
+				is_ripple_track_call(binding.initial.callee, context)
+			) {
 				error(
 					`Accessing a tracked object directly is not allowed, use the \`@\` prefix to read the value inside a tracked object - for example \`@${node.object.name}${node.property.type === 'Identifier' ? `.${node.property.name}` : ''}\``,
 					context.state.analysis.module.filename,
 					node,
-				)
+				);
 			}
 		}
 
@@ -510,10 +514,10 @@ const visitors = {
 		}
 	},
 	/**
-	 * 
-	 * @param {any} node 
-	 * @param {any} context 
-	 * @returns 
+	 *
+	 * @param {any} node
+	 * @param {any} context
+	 * @returns
 	 */
 	TryStatement(node, context) {
 		if (!is_inside_component(context)) {
@@ -585,7 +589,6 @@ const visitors = {
 			context.state.analysis.module.filename,
 			node,
 		);
-
 	},
 
 	Element(node, context) {
@@ -774,9 +777,9 @@ const visitors = {
 	},
 
 	/**
-	 * 
-	 * @param {any} node 
-	 * @param {any} context 
+	 *
+	 * @param {any} node
+	 * @param {any} context
 	 */
 	AwaitExpression(node, context) {
 		if (is_inside_component(context)) {
@@ -791,7 +794,7 @@ const visitors = {
 				error(
 					'`await` is not allowed in client-side control-flow statements',
 					context.state.analysis.module.filename,
-					node
+					node,
 				);
 			}
 		}

@@ -3,7 +3,7 @@ import { compile } from 'ripple/compiler';
 
 describe('compiler > assignments', () => {
 	it('properly handles JS assignments, reads and updates to array indices', () => {
-		const logs: (number | undefined)[] = [];
+		const logs: /* Unknown: TSParenthesizedType */[] = [];
 
 		component App() {
 			let items: number[] = [];
@@ -70,10 +70,38 @@ describe('compiler > assignments', () => {
 		render(App);
 
 		expect(logs).toEqual([
-			undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined,
-			123, 123, 123, 123, 123, 123, 123, 123,
-			125, 125, 125, 125, 125, 125, 125, 125,
-			124, 123, 124, 123, 124, 123, 124, 123
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			123,
+			123,
+			123,
+			123,
+			123,
+			123,
+			123,
+			123,
+			125,
+			125,
+			125,
+			125,
+			125,
+			125,
+			125,
+			125,
+			124,
+			123,
+			124,
+			123,
+			124,
+			123,
+			124,
+			123,
 		]);
 	});
 

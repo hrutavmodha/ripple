@@ -76,14 +76,13 @@ export async function render(component) {
 			await Promise.all(output.promises);
 		}
 
-		head = output.head
-		body = output.body
-		css = output.css
+		head = output.head;
+		body = output.body;
+		css = output.css;
+	} catch (error) {
+		console.log(error);
 	}
-	catch (error) {
-		console.log(error)
-	}
-	return { head, body, css }
+	return { head, body, css };
 }
 /**
  * @returns {void}
@@ -144,7 +143,7 @@ export function get(tracked) {
 		return tracked;
 	}
 
-	return (tracked.f & DERIVED) !== 0 ? get_derived(/** @type {Derived} */(tracked)) : tracked.v;
+	return (tracked.f & DERIVED) !== 0 ? get_derived(/** @type {Derived} */ (tracked)) : tracked.v;
 }
 
 /**
