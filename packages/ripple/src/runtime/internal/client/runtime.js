@@ -277,7 +277,7 @@ var empty_get_set = { get: undefined, set: undefined };
  * @returns {Tracked}
  */
 export function tracked(v, block, get, set) {
-	// TODO: now we expose tracked, we should likely block access in DEV somehow
+
 	if (DEV) {
 		return {
 			DO_NOT_ACCESS_THIS_OBJECT_DIRECTLY: true,
