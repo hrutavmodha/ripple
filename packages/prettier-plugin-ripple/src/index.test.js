@@ -1062,6 +1062,44 @@ message.push(/* Some test comment */ greet(/* Some text */ \`Ripple\`));`;
 		expect(result).toBeWithNewline(expected);
 	});
 
+	it('should handle default arguments correctly in functions', async () => {
+		const input = `function expand({ name, startingLength = 10 }: { name: string; startingLength?: number }) {
+  return null;
+}`;
+
+		const expected = `function expand({
+  name,
+  startingLength = 10,
+}: {
+  name: string;
+  startingLength?: number;
+}) {
+  return null;
+}`;
+
+		const result = await format(input, { singleQuote: true, printWidth: 80 });
+		expect(result).toBeWithNewline(expected);
+	});
+
+	it('should handle default arguments correctly in arrow functions', async () => {
+		const input = `const expand = ({ name, startingLength = 10 }: { name: string; startingLength?: number }) => {
+  return null;
+};`;
+
+		const expected = `const expand = ({
+  name,
+  startingLength = 10,
+}: {
+  name: string;
+  startingLength?: number;
+}) => {
+  return null;
+};`;
+
+		const result = await format(input, { singleQuote: true, printWidth: 80 });
+		expect(result).toBeWithNewline(expected);
+	});
+
 	it('should handle array and object patterns correctly', async () => {
 		const input = `for (const [i = 0, item] of items.entries()) {}
 for (const {i = 0, item} of items.entries()) {}`;
@@ -2628,5 +2666,30 @@ export component App() {
 				expect(result).toBeWithNewline(expected);
 			});
 		});
+
+	describe('<tsx:react>', () => {
+		it('should format JSX inside <tsx:react> tags', async () => {
+			const input = `component App() {
+	<div>
+		<h1>{"Hello, from Ripple!"}</h1>
+		<tsx:react>
+			<div className="123">Welcome from React!</div>
+		</tsx:react>
+	</div>
+}`;
+
+			const expected = `component App() {
+  <div>
+    <h1>{'Hello, from Ripple!'}</h1>
+    <tsx:react>
+      <div className="123">Welcome from React!</div>
+    </tsx:react>
+  </div>
+}`;
+
+			const result = await format(input, { singleQuote: true });
+			expect(result).toBeWithNewline(expected);
+		});
 	});
+});
 });

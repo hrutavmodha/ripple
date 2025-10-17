@@ -1110,10 +1110,21 @@ function printRippleNode(node, path, options, print, args) {
 			nodeContent = printElement(node, path, options, print);
 			break;
 
+		case 'TsxCompat':
+			nodeContent = printTsxCompat(node, path, options, print);
+			break;
+
+		case 'JSXElement':
+			nodeContent = printJSXElement(node, path, options, print);
+			break;
+
+		case 'JSXText':
+			nodeContent = node.value;
+			break;
+
 		case 'StyleSheet':
 			nodeContent = printStyleSheet(node, path, options, print);
 			break;
-
 		case 'Rule':
 			nodeContent = printCSSRule(node, path, options, print);
 			break;
@@ -1370,23 +1381,24 @@ function printComponent(node, path, options, print) {
 	// Always add parentheses, even if no parameters
 	if (node.params && node.params.length > 0) {
 		const paramDocs = path.map(print, 'params');
-		const singleParam = node.params.length === 1;
-		const firstParamNode = node.params[0];
-		const isDestructuredParam = firstParamNode && firstParamNode.type === 'ObjectPattern';
+		const lastParam = node.params[node.params.length - 1];
+		// Don't add trailing comma if the last param has a type annotation, since the
+		// type annotation is part of the parameter formatting but isn't a separate param
+		const hasTypeAnnotation = lastParam && lastParam.typeAnnotation;
+		const shouldAddTrailingComma =
+			options.trailingComma === 'all' &&
+			lastParam &&
+			lastParam.type !== 'RestElement' &&
+			!hasTypeAnnotation;
+		const trailingCommaDoc = shouldAddTrailingComma ? ifBreak(',', '') : '';
 
-		if (singleParam && isDestructuredParam) {
-			signatureParts.push(group(concat(['(', paramDocs[0], ')'])));
-		} else {
-			const joinedParams = join(concat([',', line]), paramDocs);
-			const lastParam = node.params[node.params.length - 1];
-			const shouldAddTrailingComma =
-				options.trailingComma === 'all' && lastParam && lastParam.type !== 'RestElement';
-			const trailingCommaDoc = shouldAddTrailingComma ? ifBreak(',', '') : '';
-			const paramsDoc = group(
-				concat(['(', indent(concat([softline, joinedParams, trailingCommaDoc])), softline, ')']),
-			);
-			signatureParts.push(paramsDoc);
-		}
+		// Build params doc - keep "(" with params, ")" right after last param
+		// Params themselves handle trailing commas, so don't add one here
+		const paramsPart = join(concat([',', line]), paramDocs);
+
+		signatureParts.push(
+			group(['(', paramsPart, ')'])
+		);
 	} else {
 		signatureParts.push('()');
 	}
@@ -1440,7 +1452,7 @@ function printComponent(node, path, options, print) {
 	}
 
 	// Use Prettier's standard block statement pattern
-	const parts = [concat(signatureParts)];
+	const parts = [concat(signatureParts), ' {'];
 
 	if (statements.length > 0 || scriptContent) {
 		// Build all content that goes inside the component body
@@ -1472,9 +1484,11 @@ function printComponent(node, path, options, print) {
 		// Apply component-level indentation
 		const indentedContent = joinedContent ? indent([hardline, joinedContent]) : indent([hardline]);
 
-		parts.push(group([' {', indentedContent, hardline, '}']));
+		// Add the body and closing brace
+		parts.push(indentedContent, hardline, '}');
 	} else {
-		parts.push(' {}');
+		// Empty component body
+		parts[1] = ' {}';
 	}
 
 	return concat(parts);
@@ -1564,17 +1578,17 @@ function printFunctionExpression(node, path, options, print) {
 		parts.push(indent([hardline, concat(paramParts)]));
 		parts.push(hardline);
 		parts.push(')');
+	} else if (node.params && node.params.length > 0) {
+		// Use group/line/indent for intelligent breaking like components
+		const paramDocs = path.map(print, 'params');
+		const paramsPart = join(concat([',', line]), paramDocs);
+
+		parts.push(
+			group(['(', paramsPart, ')'])
+		);
 	} else {
-		// Single-line params
-		parts.push('(');
-		if (node.params && node.params.length > 0) {
-			const paramList = path.map(print, 'params');
-			for (let i = 0; i < paramList.length; i++) {
-				if (i > 0) parts.push(', ');
-				parts.push(paramList[i]);
-			}
-		}
-		parts.push(')');
+		// Empty params
+		parts.push('()');
 	}
 
 	// Handle return type annotation
@@ -1589,17 +1603,9 @@ function printFunctionExpression(node, path, options, print) {
 }
 
 function printArrowFunction(node, path, options, print) {
-	// Build params array properly
-	const paramParts = [];
-	const paramList = path.map(print, 'params');
-	for (let i = 0; i < paramList.length; i++) {
-		if (i > 0) paramParts.push(', ');
-		paramParts.push(paramList[i]);
-	}
-
-	// Return array of parts
 	const parts = [];
 
+	// Handle single param without parens (when arrowParens !== 'always')
 	if (
 		options.arrowParens !== 'always' &&
 		node.params.length === 1 &&
@@ -1607,11 +1613,18 @@ function printArrowFunction(node, path, options, print) {
 		!node.params[0].typeAnnotation &&
 		!node.returnType
 	) {
-		parts.push(...paramParts);
+		parts.push(path.call(print, 'params', 0));
+	} else if (node.params && node.params.length > 0) {
+		// Use group/line/indent for intelligent breaking like components and functions
+		const paramDocs = path.map(print, 'params');
+		const paramsPart = join(concat([',', line]), paramDocs);
+
+		parts.push(
+			group(['(', paramsPart, ')'])
+		);
 	} else {
-		parts.push('(');
-		parts.push(...paramParts);
-		parts.push(')');
+		// Empty params
+		parts.push('()');
 	}
 
 	// Handle return type annotation
@@ -1703,17 +1716,17 @@ function printFunctionDeclaration(node, path, options, print) {
 		parts.push(indent([hardline, concat(paramParts)]));
 		parts.push(hardline);
 		parts.push(')');
+	} else if (node.params && node.params.length > 0) {
+		// Use group/line/indent for intelligent breaking like components
+		const paramDocs = path.map(print, 'params');
+		const paramsPart = join(concat([',', line]), paramDocs);
+
+		parts.push(
+			group(['(', paramsPart, ')'])
+		);
 	} else {
-		// Single-line params
-		parts.push('(');
-		if (node.params && node.params.length > 0) {
-			const paramList = path.map(print, 'params');
-			for (let i = 0; i < paramList.length; i++) {
-				if (i > 0) parts.push(', ');
-				parts.push(paramList[i]);
-			}
-		}
-		parts.push(')');
+		// Empty params
+		parts.push('()');
 	}
 
 	// Handle return type annotation
@@ -2542,64 +2555,93 @@ function shouldAddBlankLine(currentNode, nextNode) {
 }
 
 function printObjectPattern(node, path, options, print) {
-	const printedTypeAnnotation = node.typeAnnotation ? path.call(print, 'typeAnnotation') : null;
 	const propList = path.map(print, 'properties');
 	if (propList.length === 0) {
-		if (!printedTypeAnnotation) {
-			return '{}';
+		if (node.typeAnnotation) {
+			return concat(['{}', ': ', path.call(print, 'typeAnnotation')]);
 		}
-		return group(concat(['{}', ifBreak(line, ' '), ': ', printedTypeAnnotation]));
+		return '{}';
 	}
+
 	const allowTrailingComma =
 		node.properties &&
 		node.properties.length > 0 &&
 		node.properties[node.properties.length - 1].type !== 'RestElement';
 
-	const objectContent = concat([
-		'{',
-		indent(
-			concat([
-				line,
-				join(concat([',', line]), propList),
-				allowTrailingComma && options.trailingComma !== 'none' ? ifBreak(',', '') : '',
-			]),
-		),
-		line,
-		'}',
-	]);
+	const trailingCommaDoc = allowTrailingComma && options.trailingComma !== 'none' ? ifBreak(',', '') : '';
 
-	if (!printedTypeAnnotation) {
-		return group(objectContent);
-	}
+	// When the pattern has a type annotation, we need to format them together
+	// so they break at the same time
+	if (node.typeAnnotation) {
+		const typeAnn = node.typeAnnotation.typeAnnotation;
 
-	// Create inline and multiline variants using conditionalGroup
-	const inlineVariant = group(concat([objectContent, ': ', printedTypeAnnotation]));
-
-	// For broken variant, format the type annotation in multiline style
-	// Extract and reformat TSTypeLiteral members if that's what we have
-	let brokenTypeAnnotation = printedTypeAnnotation;
-	if (
-		node.typeAnnotation &&
-		node.typeAnnotation.typeAnnotation &&
-		node.typeAnnotation.typeAnnotation.type === 'TSTypeLiteral'
-	) {
-		const typeLiteral = node.typeAnnotation.typeAnnotation;
-		if (typeLiteral.members && typeLiteral.members.length > 0) {
-			const memberDocs = path.call(
+		// If it's a TSTypeLiteral, format both object and type
+		if (typeAnn && typeAnn.type === 'TSTypeLiteral') {
+			const typeMembers = path.call(
 				(path) => path.map(print, 'members'),
 				'typeAnnotation',
 				'typeAnnotation',
 			);
-			const multilineMembers = memberDocs.map((member) => concat([member, ';']));
-			brokenTypeAnnotation = group(
-				concat(['{', indent(concat([hardline, join(hardline, multilineMembers)])), hardline, '}']),
-			);
+
+			// Use softline for proper spacing - will become space when inline, line when breaking
+			// Format type members with semicolons between AND after the last member
+			const typeMemberDocs = join(concat([';', line]), typeMembers);
+
+			// Don't wrap in group - let the outer params group control breaking
+			const objectDoc = concat([
+				'{',
+				indent(concat([line, join(concat([',', line]), propList), trailingCommaDoc])),
+				line,
+				'}',
+			]);
+			const typeDoc = typeMembers.length === 0
+				? '{}'
+				: concat([
+					'{',
+					indent(concat([line, typeMemberDocs, ifBreak(';', '')])),
+					line,
+					'}',
+				]);
+
+				// Return combined
+			return concat([objectDoc, ': ', typeDoc]);
 		}
+
+		// For other type annotations, just concatenate
+		const objectContent = group(
+			concat([
+				'{',
+				indent(
+					concat([
+						line,
+						join(concat([',', line]), propList),
+						trailingCommaDoc,
+					]),
+				),
+				line,
+				'}',
+			]),
+		);
+		return concat([objectContent, ': ', path.call(print, 'typeAnnotation')]);
 	}
 
-	const brokenVariant = group(concat([objectContent, ': ', brokenTypeAnnotation]));
+	// No type annotation - just format the object pattern
+	const objectContent = group(
+		concat([
+			'{',
+			indent(
+				concat([
+					line,
+					join(concat([',', line]), propList),
+					trailingCommaDoc,
+				]),
+			),
+			line,
+			'}',
+		]),
+	);
 
-	return conditionalGroup([inlineVariant, brokenVariant]);
+	return objectContent;
 }
 
 function printArrayPattern(node, path, options, print) {
@@ -3099,6 +3141,206 @@ function createElementLevelCommentParts(comments) {
 	}
 
 	return parts;
+}
+
+function printTsxCompat(node, path, options, print) {
+	const tagName = `<tsx:${node.kind}>`;
+	const closingTagName = `</tsx:${node.kind}>`;
+
+	const hasChildren = Array.isArray(node.children) && node.children.length > 0;
+
+	if (!hasChildren) {
+		return concat([tagName, closingTagName]);
+	}
+
+	// Print JSXElement children - they remain as JSX
+	// Filter out whitespace-only JSXText nodes
+	const finalChildren = [];
+
+	for (let i = 0; i < node.children.length; i++) {
+		const child = node.children[i];
+
+		// Skip whitespace-only JSXText nodes
+		if (child.type === 'JSXText' && !child.value.trim()) {
+			continue;
+		}
+
+		const printedChild = path.call(print, 'children', i);
+		finalChildren.push(printedChild);
+
+		if (i < node.children.length - 1) {
+			// Only add hardline if the next child is not whitespace-only
+			const nextChild = node.children[i + 1];
+			if (nextChild && !(nextChild.type === 'JSXText' && !nextChild.value.trim())) {
+				finalChildren.push(hardline);
+			}
+		}
+	}
+
+	// Format the TsxCompat element
+	const elementOutput = group([
+		tagName,
+		indent(concat([hardline, ...finalChildren])),
+		hardline,
+		closingTagName,
+	]);
+
+	return elementOutput;
+}
+
+function printJSXElement(node, path, options, print) {
+	// Get the tag name from the opening element
+	const openingElement = node.openingElement;
+	const closingElement = node.closingElement;
+
+	let tagName;
+	if (openingElement.name.type === 'JSXIdentifier') {
+		tagName = openingElement.name.name;
+	} else if (openingElement.name.type === 'JSXMemberExpression') {
+		// Handle Member expressions like React.Fragment
+		tagName = printJSXMemberExpression(openingElement.name);
+	} else {
+		tagName = openingElement.name.name || 'Unknown';
+	}
+
+	const isSelfClosing = openingElement.selfClosing;
+	const hasAttributes = openingElement.attributes && openingElement.attributes.length > 0;
+	const hasChildren = node.children && node.children.length > 0;
+
+	// Format attributes
+	let attributesDoc = '';
+	if (hasAttributes) {
+		const attrs = openingElement.attributes.map((attr, i) => {
+			if (attr.type === 'JSXAttribute') {
+				return printJSXAttribute(attr, path, options, print, i);
+			} else if (attr.type === 'JSXSpreadAttribute') {
+				return concat([
+					'{...',
+					path.call(print, 'openingElement', 'attributes', i, 'argument'),
+					'}',
+				]);
+			}
+			return '';
+		});
+		attributesDoc = concat([' ', join(' ', attrs)]);
+	}
+
+	if (isSelfClosing) {
+		return concat(['<', tagName, attributesDoc, ' />']);
+	}
+
+	if (!hasChildren) {
+		return concat(['<', tagName, attributesDoc, '></', tagName, '>']);
+	}
+
+	// Format children - filter out empty text nodes
+	const childrenDocs = [];
+	for (let i = 0; i < node.children.length; i++) {
+		const child = node.children[i];
+
+		if (child.type === 'JSXText') {
+			// Handle JSX text nodes - only include if not just whitespace
+			const text = child.value;
+			if (text.trim()) {
+				childrenDocs.push(text);
+			}
+		} else if (child.type === 'JSXExpressionContainer') {
+			// Handle JSX expression containers
+			childrenDocs.push(concat(['{', path.call(print, 'children', i, 'expression'), '}']));
+		} else {
+			// Handle nested JSX elements
+			childrenDocs.push(path.call(print, 'children', i));
+		}
+	}
+
+	// Check if content can be inlined (single text node or single expression)
+	if (childrenDocs.length === 1 && typeof childrenDocs[0] === 'string') {
+		return concat(['<', tagName, attributesDoc, '>', childrenDocs[0], '</', tagName, '>']);
+	}
+
+	// Multiple children or complex children - format with line breaks
+	const formattedChildren = [];
+	for (let i = 0; i < childrenDocs.length; i++) {
+		formattedChildren.push(childrenDocs[i]);
+		if (i < childrenDocs.length - 1) {
+			formattedChildren.push(hardline);
+		}
+	}
+
+	// Build the final element
+	return group([
+		'<',
+		tagName,
+		attributesDoc,
+		'>',
+		indent(concat([hardline, ...formattedChildren])),
+		hardline,
+		'</',
+		tagName,
+		'>',
+	]);
+}
+
+function printJSXAttribute(attr, path, options, print, index) {
+	const name = attr.name.name;
+
+	if (!attr.value) {
+		return name;
+	}
+
+	if (attr.value.type === 'Literal' || attr.value.type === 'StringLiteral') {
+		const quote = options.jsxSingleQuote ? "'" : '"';
+		return concat([name, '=', quote, attr.value.value, quote]);
+	}
+
+	if (attr.value.type === 'JSXExpressionContainer') {
+		// For JSXExpressionContainer, we need to access the expression inside
+		// Use a simple approach since we don't have direct path access here
+		const exprValue = attr.value.expression;
+		let exprStr;
+
+		if (exprValue.type === 'Literal' || exprValue.type === 'StringLiteral') {
+			exprStr = JSON.stringify(exprValue.value);
+		} else if (exprValue.type === 'Identifier') {
+			exprStr = exprValue.name;
+		} else if (exprValue.type === 'MemberExpression') {
+			exprStr = printMemberExpressionSimple(exprValue);
+		} else {
+			// For complex expressions, try to stringify
+			exprStr = '...';
+		}
+
+		return concat([name, '={', exprStr, '}']);
+	}
+
+	return name;
+}
+
+function printJSXMemberExpression(node) {
+	if (node.type === 'JSXIdentifier') {
+		return node.name;
+	}
+	if (node.type === 'JSXMemberExpression') {
+		return printJSXMemberExpression(node.object) + '.' + printJSXMemberExpression(node.property);
+	}
+	return 'Unknown';
+}
+
+function printMemberExpressionSimple(node) {
+	if (node.type === 'Identifier') {
+		return node.name;
+	}
+	if (node.type === 'MemberExpression') {
+		const obj = printMemberExpressionSimple(node.object);
+		const prop = node.computed
+			? '[' + printMemberExpressionSimple(node.property) + ']'
+			: '.' + printMemberExpressionSimple(node.property);
+		return obj + prop;
+	}
+	if (node.type === 'Literal') {
+		return JSON.stringify(node.value);
+	}
+	return '';
 }
 
 function printElement(node, path, options, print) {

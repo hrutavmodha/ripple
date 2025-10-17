@@ -553,6 +553,10 @@ const visitors = {
 		return b.id(node.name);
 	},
 
+	JSXExpressionContainer(node, context) {
+		return context.visit(node.expression);
+	},
+
 	JSXElement(node, context) {
 		const name = node.openingElement.name;
 		const attributes = node.openingElement.attributes;
@@ -583,7 +587,7 @@ const visitors = {
 		}
 
 		return b.call(
-			'_$_jsx',
+			'__compat.jsx',
 			name.type === 'JSXIdentifier' && name.name[0].toLowerCase() === name.name[0]
 				? b.literal(name.name)
 				: context.visit(name),
