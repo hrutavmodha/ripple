@@ -177,6 +177,25 @@ const visitors = {
 		if (node.object.type === 'Identifier' && !node.object.tracked) {
 			const binding = context.state.scope.get(node.object.name);
 
+			if (binding && binding.metadata?.isTrackedObject) {
+				const internalProperties = new Set(['__v', 'a', 'b', 'c', 'f']); // List of internal properties
+
+				let propertyName = null;
+				if (node.property.type === 'Identifier' && !node.computed) {
+					propertyName = node.property.name;
+				} else if (node.property.type === 'Literal' && typeof node.property.value === 'string') {
+					propertyName = node.property.value;
+				}
+
+				if (propertyName && internalProperties.has(propertyName)) {
+					error(
+						`Directly accessing internal property "${propertyName}" of a tracked object is not allowed. Use \`get(${node.object.name})\` or \`@${node.object.name}\` instead.`,
+						context.state.analysis.module.filename,
+						node.property // Point the error to the property itself
+					);
+				}
+			}
+
 			if (
 				binding !== null &&
 				binding.initial?.type === 'CallExpression' &&
@@ -235,6 +254,17 @@ const visitors = {
 			const metadata = { tracking: false, await: false };
 
 			if (declarator.id.type === 'Identifier') {
+				const binding = state.scope.get(declarator.id.name);
+				if (binding && declarator.init && declarator.init.type === 'CallExpression') {
+					const callee = declarator.init.callee;
+					// Check if it's a call to `track` or `tracked`
+					if (
+						(callee.type === 'Identifier' && (callee.name === 'track' || callee.name === 'tracked')) ||
+						(callee.type === 'MemberExpression' && callee.property.type === 'Identifier' && (callee.property.name === 'track' || callee.property.name === 'tracked'))
+					) {
+						binding.metadata = { ...binding.metadata, isTrackedObject: true };
+					}
+				}
 				visit(declarator, state);
 			} else {
 				const paths = extract_paths(declarator.id);

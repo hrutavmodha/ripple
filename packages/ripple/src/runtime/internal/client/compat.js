@@ -5,8 +5,6 @@ import { active_block } from "./runtime";
 
 /**
  * @param {string} kind
-<<<<<<< HEAD
-=======
  * @returns {CompatApi | null}
  */
 function get_compat_from_root(kind)  {
@@ -28,14 +26,10 @@ function get_compat_from_root(kind)  {
 
 /**
  * @param {string} kind
->>>>>>> 84e47b7fb8ac06c1aed70d148465fdfdf9bf6682
  * @param {Node} node
  * @param {() => JSX.Element[]} children_fn
  */
 export function tsx_compat(kind, node, children_fn) {
-<<<<<<< HEAD
-	throw new Error('Not implemented yet');
-=======
 	var compat = get_compat_from_root(kind);
 
 	if (compat == null) {
@@ -43,5 +37,4 @@ export function tsx_compat(kind, node, children_fn) {
 	}
 
 	compat.createComponent(node, children_fn);
->>>>>>> 84e47b7fb8ac06c1aed70d148465fdfdf9bf6682
 }
