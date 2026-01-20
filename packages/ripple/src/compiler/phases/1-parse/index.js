@@ -2501,23 +2501,17 @@ function get_comment_handlers(source, comments, index = 0) {
 						const element = /** @type {AST.Element | undefined} */ (
 							path.findLast((ancestor) => ancestor && ancestor.type === 'Element')
 						);
-						if (!element) return null;
-
-						if (element.children && element.children.length > 0) return null;
-						if (!element.openingElement || !element.closingElement) return null;
-						if (element.selfClosing || element.unclosed) return null;
-						if (typeof element.openingElement.end !== 'number') return null;
-						if (typeof element.end !== 'number') return null;
-
-						const contentStart = element.openingElement.end;
-						const rawContentEnd = element.closingElement.start;
-						const contentEnd =
-							typeof rawContentEnd === 'number' && rawContentEnd > contentStart
-								? rawContentEnd
-								: element.end;
-
-						const betweenTags = comment.start >= contentStart && comment.end <= contentEnd;
-						if (!betweenTags) return null;
+						if (
+							!element ||
+							element.children.length > 0 ||
+							!element.closingElement ||
+							!(
+								comment.start >= /** @type {AST.NodeWithLocation} */ (element.openingElement).end &&
+								comment.end <= /** @type {AST.NodeWithLocation} */ (element).end
+							)
+						) {
+							return null;
+						}
 
 						return element;
 					}
