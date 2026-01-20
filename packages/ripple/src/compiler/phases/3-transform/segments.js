@@ -898,32 +898,28 @@ export function convert_source_map_to_mappings(
 				}
 				return;
 			} else if (node.type === 'MemberExpression') {
-				// Visit in source order: object, property
+				if (node.loc) {
+					mappings.push(
+						get_mapping_from_node(node, src_to_gen_map, gen_line_offsets, mapping_data_verify_only),
+					);
+				}
+
 				if (node.object) {
 					visit(node.object);
 				}
-				if (node.computed && node.property && node.loc) {
-					// Need to cover the whole computed property ['something'] or obj[expr]:
-					// Add a mapping for the closing bracket ']'
-					// ESRap sourcemap includes the opening bracket '[' in the property loc,
-					// but for the closing bracket it also includes what comes after it
-					// so we never get the mapping that covers just the computed property.
-					tokens.push({
-						source: ']',
-						generated: ']',
-						loc: {
-							start: {
-								line: node.loc.end.line,
-								column: node.loc.end.column - 1,
-							},
-							end: node.loc.end,
-						},
-					});
+				if (node.property) {
+					visit(node.property);
 
-					// Also visit the property for its own mapping
-					visit(node.property);
-				} else if (!node.computed && node.property) {
-					visit(node.property);
+					if (node.computed && node.property.loc) {
+						mappings.push(
+							get_mapping_from_node(
+								node.property,
+								src_to_gen_map,
+								gen_line_offsets,
+								mapping_data_verify_only,
+							),
+						);
+					}
 				}
 				return;
 			} else if (node.type === 'AssignmentExpression' || node.type === 'AssignmentPattern') {

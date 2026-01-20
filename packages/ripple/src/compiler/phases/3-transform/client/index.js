@@ -3171,6 +3171,16 @@ function create_tsx_with_typescript_support() {
 			context.write(node.raw);
 			context.location(loc.end.line, loc.end.column);
 		},
+		MemberExpression(node, context) {
+			if (!node.loc) {
+				base_tsx.MemberExpression?.(node, context);
+				return;
+			}
+			const loc = /** @type {AST.SourceLocation} */ (node.loc);
+			context.location(loc.start.line, loc.start.column);
+			base_tsx.MemberExpression?.(node, context);
+			context.location(loc.end.line, loc.end.column);
+		},
 		TemplateLiteral(node, context) {
 			const loc = /** @type {AST.SourceLocation} */ (node.loc);
 			context.location(loc.start.line, loc.start.column);
