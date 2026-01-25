@@ -1404,6 +1404,27 @@ const visitors = {
 					}),
 				);
 				state.template?.push(`</${node.id.name}>`);
+
+				// We need to check if any child nodes are dynamic to determine
+				// if we need to pop the hydration stack to the parent node
+				const needs_pop = node.children.some(
+					(child) =>
+						child.type === 'IfStatement' ||
+						child.type === 'TryStatement' ||
+						child.type === 'ForOfStatement' ||
+						child.type === 'SwitchStatement' ||
+						child.type === 'TsxCompat' ||
+						child.type === 'Html' ||
+						(child.type === 'Element' &&
+							(child.id.type !== 'Identifier' || !is_element_dom_element(child))) ||
+						(child.type === 'Text' && child.expression.type !== 'Literal'),
+				);
+
+				if (needs_pop) {
+					const id = state.flush_node?.();
+
+					init.push(b.stmt(b.call('_$_.pop', id)));
+				}
 			}
 
 			update.push(...local_updates);
@@ -1882,7 +1903,7 @@ const visitors = {
 			context.state.template?.push('<!>');
 		}
 
-		const id = context.state.flush_node?.(is_controlled);
+		const id = context.state.flush_node?.(false, is_controlled);
 		const pattern = /** @type {AST.VariableDeclaration} */ (node.left).declarations[0].id;
 		const body_scope = /** @type {ScopeInterface} */ (context.state.scopes.get(node.body));
 
@@ -2799,30 +2820,33 @@ function transform_children(children, context) {
 			const current_prev = prev;
 			/** @type {AST.Identifier | null} */
 			let cached;
-			/** @param {boolean} [is_controlled] */
-			const flush_node = (is_controlled) => {
+			/**
+			 * @param {boolean} [is_text]
+			 * @param {boolean} [is_controlled]
+			 * */
+			const flush_node = (is_text, is_controlled) => {
 				if (cached && !is_controlled) {
 					return cached;
 				} else if (current_prev !== null) {
 					const id = get_id(node);
-					state.init?.push(b.var(id, b.call('_$_.sibling', current_prev())));
+					state.init?.push(b.var(id, b.call('_$_.sibling', current_prev(), is_text && b.true)));
 					cached = id;
 					return id;
 				} else if (initial !== null) {
 					if (is_fragment) {
 						const id = get_id(node);
-						state.init?.push(b.var(id, b.call('_$_.child_frag', initial)));
+						state.init?.push(b.var(id, b.call('_$_.first_child_frag', initial, is_text && b.true)));
 						cached = id;
 						return id;
 					}
 					return initial;
 				} else if (state.flush_node !== null) {
 					if (is_controlled) {
-						return state.flush_node?.();
+						return state.flush_node?.(is_text);
 					}
 
 					const id = get_id(node);
-					state.init?.push(b.var(id, b.call('_$_.child', state.flush_node?.())));
+					state.init?.push(b.var(id, b.call('_$_.child', state.flush_node?.(), is_text && b.true)));
 					cached = id;
 					return id;
 				} else {
@@ -2849,7 +2873,7 @@ function transform_children(children, context) {
 			} else if (node.type === 'Html') {
 				context.state.template?.push('<!>');
 
-				const id = flush_node();
+				const id = flush_node(false);
 				state.update?.push({
 					operation: () =>
 						b.stmt(
@@ -2865,7 +2889,7 @@ function transform_children(children, context) {
 			} else if (node.type === 'Text') {
 				if (metadata?.tracking) {
 					state.template?.push(' ');
-					const id = flush_node();
+					const id = flush_node(true);
 					state.update?.push({
 						operation: (key) => b.stmt(b.call('_$_.set_text', id, key)),
 						expression: /** @type {AST.Expression} */ (expression),
@@ -2884,14 +2908,14 @@ function transform_children(children, context) {
 						) {
 							state.template?.push(escape_html(expr.value));
 						} else {
-							const id = flush_node();
+							const id = flush_node(true);
 							state.init?.push(
 								b.var(/** @type {AST.Identifier} */ (id), b.call('_$_.create_text', expr)),
 							);
 							state.final?.push(b.stmt(b.call('_$_.append', b.id('__anchor'), id)));
 						}
 					} else {
-						const id = flush_node();
+						const id = flush_node(true);
 						state.template?.push(' ');
 						// avoid set_text overhead for single text nodes
 						state.init?.push(
@@ -2906,16 +2930,22 @@ function transform_children(children, context) {
 					}
 				} else {
 					// Handle Text nodes in fragments
-					state.template?.push(' ');
-					const id = flush_node();
-					state.update?.push({
-						operation: (key) => b.stmt(b.call('_$_.set_text', id, key)),
-						expression: /** @type {AST.Expression} */ (expression),
-						identity: node.expression,
-						initial: b.literal(' '),
-					});
-					if (metadata?.await) {
-						/** @type {NonNullable<TransformClientState['update']>} */ (state.update).async = true;
+					const expr = /** @type {AST.Expression} */ (expression);
+					if (expr.type === 'Literal') {
+						state.template?.push(escape_html(expr.value));
+					} else {
+						state.template?.push(' ');
+						const id = flush_node(true);
+						state.update?.push({
+							operation: (key) => b.stmt(b.call('_$_.set_text', id, key)),
+							expression: /** @type {AST.Expression} */ (expression),
+							identity: node.expression,
+							initial: b.literal(' '),
+						});
+						if (metadata?.await) {
+							/** @type {NonNullable<TransformClientState['update']>} */ (state.update).async =
+								true;
+						}
 					}
 				}
 			} else if (node.type === 'ForOfStatement') {
@@ -3851,25 +3881,31 @@ export function transform_client(filename, source, analysis, to_ts, minify_css) 
 
 	const program = /** @type {AST.Program} */ (walk(analysis.ast, { ...state }, visitors));
 
-	for (const hoisted of state.hoisted) {
-		program.body.unshift(hoisted);
-	}
+	const body = [];
 
 	for (const import_node of state.imports) {
 		if (typeof import_node === 'string') {
-			program.body.unshift(b.stmt(b.id(import_node)));
+			body.push(b.stmt(b.id(import_node)));
 		} else {
-			program.body.unshift(import_node);
+			body.push(import_node);
 		}
 	}
 
+	for (const hoisted of state.hoisted) {
+		body.push(hoisted);
+	}
+
+	body.push(...program.body);
+
 	if (state.events.size > 0) {
-		program.body.push(
+		body.push(
 			b.stmt(
 				b.call('_$_.delegate', b.array(Array.from(state.events).map((name) => b.literal(name)))),
 			),
 		);
 	}
+
+	program.body = body;
 
 	const language_handler = to_ts
 		? create_tsx_with_typescript_support(analysis.comments)

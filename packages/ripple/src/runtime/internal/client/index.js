@@ -1,6 +1,6 @@
 export {
 	first_child as child,
-	child_frag,
+	first_child_frag,
 	next_sibling as sibling,
 	document,
 	create_text,
@@ -87,3 +87,5 @@ export { rpc } from './rpc.js';
 export { tsx_compat } from './compat.js';
 
 export { TRY_BLOCK } from './constants.js';
+
+export { pop } from './hydration.js';

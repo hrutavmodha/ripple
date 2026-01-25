@@ -6,7 +6,8 @@ import {
 	TEMPLATE_SVG_NAMESPACE,
 	TEMPLATE_MATHML_NAMESPACE,
 } from '../../../constants.js';
-import { first_child, is_firefox } from './operations.js';
+import { hydrate_next, hydrate_node, hydrating, pop } from './hydration.js';
+import { get_first_child, is_firefox } from './operations.js';
 import { active_block, active_namespace } from './runtime.js';
 
 /**
@@ -68,13 +69,17 @@ export function template(content, flags) {
 	var has_start = !is_comment && !content.startsWith('<!>');
 
 	return () => {
+		if (hydrating) {
+			assign_nodes(/** @type {Node} */ (hydrate_node), /** @type {Node} */ (hydrate_node));
+			return /** @type {Node} */ (hydrate_node);
+		}
 		// If using runtime namespace, check active_namespace
 		var svg = !is_comment && (use_svg_namespace || active_namespace === 'svg');
 		var mathml = !is_comment && (use_mathml_namespace || active_namespace === 'mathml');
 
 		if (node === undefined) {
 			node = create_fragment_from_html(has_start ? content : '<!>' + content, svg, mathml);
-			if (!is_fragment) node = /** @type {Node} */ (first_child(node));
+			if (!is_fragment) node = /** @type {Node} */ (get_first_child(node));
 		}
 
 		var clone =
@@ -83,7 +88,7 @@ export function template(content, flags) {
 				: /** @type {Node} */ (node).cloneNode(true);
 
 		if (is_fragment) {
-			var start = first_child(clone);
+			var start = get_first_child(clone);
 			var end = clone.lastChild;
 
 			assign_nodes(/** @type {Node} */ (start), /** @type {Node} */ (end));
@@ -101,6 +106,15 @@ export function template(content, flags) {
  * @param {Node} dom - The DOM node to append.
  */
 export function append(anchor, dom) {
+	if (hydrating) {
+		pop(dom);
+		// During hydration, if anchor === dom, we're hydrating a child component
+		// where the "anchor" IS the content. Don't advance past it.
+		if (anchor !== dom) {
+			hydrate_next();
+		}
+		return;
+	}
 	anchor.before(/** @type {Node} */ (dom));
 }
 
@@ -117,11 +131,11 @@ function from_namespace(content, ns = 'svg') {
 	elem.innerHTML = wrapped;
 	var fragment = elem.content;
 
-	var root = /** @type {Element} */ (first_child(fragment));
+	var root = /** @type {Element} */ (get_first_child(fragment));
 	var result = document.createDocumentFragment();
 
 	var first;
-	while ((first = first_child(root))) {
+	while ((first = get_first_child(root))) {
 		result.appendChild(/** @type {Node} */ (first));
 	}
 
