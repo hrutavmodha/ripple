@@ -11,7 +11,7 @@ export function is_ts_pragma(comment) {
 	if (comment.type !== 'Line') return false;
 
 	const pragmas = ['@ts-ignore', '@ts-expect-error', '@ts-nocheck', '@ts-check'];
-	return pragmas.some((pragma) => comment.value.includes(pragma));
+	return pragmas.some((pragma) => comment.value.trimStart().startsWith(pragma));
 }
 
 /**
