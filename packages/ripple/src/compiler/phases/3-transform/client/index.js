@@ -330,6 +330,33 @@ function set_hidden_import_from_ripple(name, context) {
 	return name;
 }
 
+/**
+ * @param {TransformClientContext} context
+ * @param {Partial<TransformClientState>} [more_state]
+ * @return TransformClientContext
+ */
+function SetContextForOutsideComponent(context, more_state = {}) {
+	return /** @type {TransformClientContext} */ ({
+		...context,
+		state: SetStateForOutsideComponent(context.state, more_state),
+	});
+}
+
+/**
+ * @param {TransformClientState} state
+ * @param {Partial<TransformClientState>} [more_state]
+ * @return TransformClientState
+ */
+function SetStateForOutsideComponent(state, more_state = {}) {
+	return /** @type {TransformClientState} */ ({
+		...state,
+		...more_state,
+		init: null,
+		update: null,
+		final: null,
+	});
+}
+
 /** @type {Visitors<AST.Node, TransformClientState>} */
 const visitors = {
 	_(node, { next, state, path }) {
@@ -1937,7 +1964,7 @@ const visitors = {
 	SwitchStatement(node, context) {
 		if (!is_inside_component(context)) {
 			if (context.state.to_ts) {
-				return transform_ts_child(node, context);
+				return transform_ts_child(node, SetContextForOutsideComponent(context));
 			}
 
 			return context.next();
@@ -2012,7 +2039,7 @@ const visitors = {
 	IfStatement(node, context) {
 		if (!is_inside_component(context)) {
 			if (context.state.to_ts) {
-				return transform_ts_child(node, context);
+				return transform_ts_child(node, SetContextForOutsideComponent(context));
 			}
 
 			return context.next();
@@ -2411,7 +2438,7 @@ function transform_ts_child(node, context) {
 					attr.value === null
 						? b.literal(true)
 						: // reset init, update, final to avoid adding attr value to the component body
-							visit(attr.value, { ...state, metadata, init: null, update: null, final: null });
+							visit(attr.value, SetStateForOutsideComponent(state, { metadata }));
 
 				// Handle both regular identifiers and tracked identifiers
 				/** @type {string} */
@@ -2554,7 +2581,12 @@ function transform_ts_child(node, context) {
 			);
 		}
 
-		const result = b.if(/** @type {AST.Expression} */ (visit(node.test)), consequent, alternate);
+		const result = b.if(
+			/** @type {AST.Expression} */ (visit(node.test)),
+			consequent,
+			alternate,
+			/** @type {AST.NodeWithLocation} */ (node),
+		);
 		if (!state.init) {
 			return result;
 		}

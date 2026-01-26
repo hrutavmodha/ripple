@@ -710,10 +710,13 @@ function function_builder(id, params, body, async = false, loc_info) {
  * @param {AST.Expression} test
  * @param {AST.Statement} consequent
  * @param {AST.Statement | null} [alternate]
+ * @param {AST.NodeWithLocation} [loc_info]
  * @returns {AST.IfStatement}
  */
-function if_builder(test, consequent, alternate) {
-	return { type: 'IfStatement', test, consequent, alternate, metadata: { path: [] } };
+function if_builder(test, consequent, alternate, loc_info) {
+	/** @type {AST.IfStatement} */
+	const node = { type: 'IfStatement', test, consequent, alternate, metadata: { path: [] } };
+	return set_location(node, loc_info);
 }
 
 /**
