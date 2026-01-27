@@ -4,7 +4,7 @@ import type {
 	Mapping as VolarMapping,
 } from '@volar/language-core';
 import type { DocumentHighlightKind } from 'vscode-languageserver-types';
-import type { SourceMapMappings } from '@jridgewell/sourcemap-codec';
+import type { RawSourceMap } from 'source-map';
 
 // ============================================================================
 // Compiler API Exports
@@ -18,7 +18,7 @@ export interface CompileResult {
 	/** The generated JavaScript code with source map */
 	js: {
 		code: string;
-		map: SourceMapMappings;
+		map: RawSourceMap;
 	};
 	/** The generated CSS */
 	css: string;

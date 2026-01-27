@@ -1,6 +1,5 @@
 /** @import * as AST from 'estree'; */
-/** @import { SourceMapMappings } from '@jridgewell/sourcemap-codec'; */
-/** @import { TSESTree } from '@typescript-eslint/types'; */
+/** @import { RawSourceMap } from 'source-map'; */
 /**
 @import {
 	TransformServerContext,
@@ -8,7 +7,6 @@
 	Visitors,
 	AnalysisResult,
 	ScopeInterface,
-	Visitor
 } from '#compiler' */
 
 import * as b from '../../../../utils/builders.js';
@@ -1242,7 +1240,7 @@ const visitors = {
  * @param {string} source
  * @param {AnalysisResult} analysis
  * @param {boolean} minify_css
- * @returns {{ ast: AST.Program; js: { code: string; map: SourceMapMappings | null }; css: string; }}
+ * @returns {{ ast: AST.Program; js: { code: string; map: RawSourceMap | null }; css: string; }}
  */
 export function transform_server(filename, source, analysis, minify_css) {
 	// Use component metadata collected during the analyze phase

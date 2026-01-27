@@ -2,11 +2,11 @@ import { TEXT_NODE } from '../../../constants.js';
 import { hydrate_node, hydrating, set_hydrate_node } from './hydration.js';
 import { get_descriptor } from './utils.js';
 
-/** @type {() => Node | null} */
+/** @type {(() => Node | null)} */
 var first_child_getter;
-/** @type {() => Node | null} */
+/** @type {(() => Node | null)} */
 var next_sibling_getter;
-/** @type {() => Node | null} */
+/** @type {(() => Node | null)} */
 var last_child_getter;
 
 /** @type {Document} */
@@ -23,12 +23,15 @@ export function init_operations() {
 	is_firefox = /Firefox/.test(navigator.userAgent);
 	document = window.document;
 
-	// @ts-ignore
-	first_child_getter = get_descriptor(node_prototype, 'firstChild').get;
-	// @ts-ignore
-	next_sibling_getter = get_descriptor(node_prototype, 'nextSibling').get;
-	// @ts-ignore
-	last_child_getter = get_descriptor(node_prototype, 'lastChild').get;
+	first_child_getter = /** @type {(() => Node | null)} */ (
+		get_descriptor(node_prototype, 'firstChild')?.get
+	);
+	next_sibling_getter = /** @type {(() => Node | null)} */ (
+		get_descriptor(node_prototype, 'nextSibling')?.get
+	);
+	last_child_getter = /** @type {(() => Node | null)} */ (
+		get_descriptor(node_prototype, 'lastChild')?.get
+	);
 
 	// the following assignments improve perf of lookups on DOM nodes
 	// @ts-expect-error

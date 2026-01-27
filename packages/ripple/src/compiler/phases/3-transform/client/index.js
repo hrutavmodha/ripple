@@ -1,7 +1,7 @@
 /**
 @import * as AST from 'estree';
 @import * as ESTreeJSX from 'estree-jsx';
-@import { SourceMapMappings } from '@jridgewell/sourcemap-codec';
+@import { RawSourceMap } from 'source-map';
 @import {
 	AnalysisResult,
 	TransformClientContext,
@@ -3877,7 +3877,7 @@ function create_tsx_with_typescript_support(comments) {
  * @param {AnalysisResult} analysis - Analysis result
  * @param {boolean} to_ts - Whether to generate TypeScript output
  * @param {boolean} minify_css - Whether to minify CSS output
- * @returns {{ ast: AST.Program, js: { code: string, map: SourceMapMappings, post_processing_changes?: PostProcessingChanges, line_offsets?: LineOffsets }, css: string, errors:  RippleCompileError[]}}
+ * @returns {{ ast: AST.Program, js: { code: string, map: RawSourceMap, post_processing_changes?: PostProcessingChanges, line_offsets?: LineOffsets }, css: string, errors:  RippleCompileError[]}}
  */
 export function transform_client(filename, source, analysis, to_ts, minify_css) {
 	/** @type {TransformClientState} */

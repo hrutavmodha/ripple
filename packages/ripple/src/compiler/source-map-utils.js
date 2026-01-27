@@ -3,6 +3,7 @@
  @import * as AST from 'estree';
  @import { CodeMapping } from 'ripple/compiler';
  @import { CodeMapping as VolarCodeMapping } from '@volar/language-core';
+ @import { RawSourceMap } from 'source-map';
  */
 
 /**
@@ -72,7 +73,7 @@ export const offset_to_line_col = (offset, line_offsets) => {
 /**
  * Build a source-to-generated position lookup map from an esrap source map
  * Applies post-processing adjustments during map building for efficiency
- * @param {object} source_map - The source map object from esrap (v3 format)
+ * @param {RawSourceMap} source_map - The source map object from esrap (v3 format)
  * @param {PostProcessingChanges} post_processing_changes - Optional post-processing changes to apply
  * @param {LineOffsets} line_offsets - Pre-computed line offsets array
  * @param {string} generated_code - The final generated code (after post-processing)
@@ -90,7 +91,6 @@ export function build_src_to_gen_map(
 	const reverse_map = new Map();
 
 	// Decode the VLQ-encoded mappings string
-	// @ts-ignore
 	const decoded = decode(source_map.mappings);
 
 	/**

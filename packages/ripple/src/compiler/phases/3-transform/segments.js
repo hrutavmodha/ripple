@@ -2,7 +2,7 @@
 @import * as AST from 'estree';
 @import * as ESTreeJSX from 'estree-jsx';
 @import { DocumentHighlightKind } from 'vscode-languageserver-types';
-@import { SourceMapMappings } from '@jridgewell/sourcemap-codec';
+@import { RawSourceMap } from 'source-map';
 @import {
 	CustomMappingData,
 	PluginActionOverrides,
@@ -267,7 +267,7 @@ function extract_classes(node, src_to_gen_map, gen_line_offsets, src_line_offset
  * @param {AST.Node} ast_from_source - The original AST from source
  * @param {string} source - Original source code
  * @param {string} generated_code - Generated code (returned in output, not used for searching)
- * @param {SourceMapMappings} source_map - Esrap source map for accurate position lookup
+ * @param {RawSourceMap} source_map - Esrap source map for accurate position lookup
  * @param {PostProcessingChanges } post_processing_changes - Optional post-processing changes
  * @param {number[]} line_offsets - Pre-computed line offsets array for generated code
  * @returns {Omit<VolarMappingsResult, 'errors'>}

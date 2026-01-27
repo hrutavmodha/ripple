@@ -14,8 +14,8 @@ import type * as acorn from 'acorn';
 import type * as AST from 'estree';
 import type * as ESTreeJSX from 'estree-jsx';
 import type * as ESRap from 'esrap';
-import type * as SourceMap from '@jridgewell/sourcemap-codec';
 import type * as RippleCompiler from '#compiler';
+import type { RawSourceMap } from 'source-map';
 import type { RippleCompileError } from 'ripple/compiler';
 
 type ForInit = boolean | 'await';
@@ -42,7 +42,7 @@ declare module 'esrap' {
 		ast: AST.Node,
 		visitors: V,
 		options?: ESRap.PrintOptions,
-	): { code: string; map: SourceMap.SourceMapMappings };
+	): { code: string; map: RawSourceMap };
 }
 
 declare module 'esrap/languages/tsx' {
