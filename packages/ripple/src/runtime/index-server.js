@@ -76,3 +76,25 @@ export function createSubscriber(_) {
 		/* NO-OP */
 	};
 }
+
+function noop() {}
+
+// These don't get compiled in {ref fn} templates
+// But can still remain in imports and possibly in js
+export const bindValue = noop;
+export const bindChecked = noop;
+export const bindGroup = noop;
+export const bindClientWidth = noop;
+export const bindClientHeight = noop;
+export const bindContentRect = noop;
+export const bindContentBoxSize = noop;
+export const bindBorderBoxSize = noop;
+export const bindDevicePixelContentBoxSize = noop;
+export const bindFiles = noop;
+export const bindIndeterminate = noop;
+export const bindInnerHTML = noop;
+export const bindInnerText = noop;
+export const bindTextContent = noop;
+export const bindNode = noop;
+export const bindOffsetWidth = noop;
+export const bindOffsetHeight = noop;
