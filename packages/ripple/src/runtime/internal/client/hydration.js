@@ -1,5 +1,5 @@
-import { HYDRATION_ERROR } from '../../../constants';
-import { get_next_sibling } from './operations';
+import { HYDRATION_ERROR } from '../../../constants.js';
+import { get_next_sibling } from './operations.js';
 
 export let hydrating = false;
 
