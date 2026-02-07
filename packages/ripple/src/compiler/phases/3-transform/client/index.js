@@ -3684,6 +3684,16 @@ function create_tsx_with_typescript_support(comments) {
 				context.visit(node.value.body);
 			}
 		},
+		TSAsExpression(node, context) {
+			if (!node.loc) {
+				base_tsx.TSAsExpression?.(node, context);
+				return;
+			}
+			const loc = /** @type {AST.SourceLocation} */ (node.loc);
+			context.location(loc.start.line, loc.start.column);
+			base_tsx.TSAsExpression?.(node, context);
+			context.location(loc.end.line, loc.end.column);
+		},
 		TSObjectKeyword(node, context) {
 			if (node.loc) {
 				context.location(node.loc.start.line, node.loc.start.column);
