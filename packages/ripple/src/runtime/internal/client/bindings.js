@@ -216,11 +216,12 @@ export function bindValue(maybe_tracked, set_func = undefined) {
 					value = [].map.call(select.querySelectorAll(query), get_option_value);
 				} else {
 					/** @type {HTMLOptionElement | null} */
-					// @ts-ignore
 					var selected_option =
-						select.querySelector(query) ??
+						/** @type {HTMLOptionElement | null} */ (select.querySelector(query)) ??
 						// will fall back to first non-disabled option if no option is selected
-						select.querySelector('option:not([disabled])');
+						/** @type {HTMLOptionElement | null} */ (
+							select.querySelector('option:not([disabled])')
+						);
 					value = selected_option && get_option_value(selected_option);
 				}
 
@@ -234,8 +235,9 @@ export function bindValue(maybe_tracked, set_func = undefined) {
 				// Mounting and value undefined -> take selection from dom
 				if (mounting && value === undefined) {
 					/** @type {HTMLOptionElement | null} */
-					// @ts-ignore
-					var selected_option = select.querySelector(':checked');
+					var selected_option = /** @type {HTMLOptionElement | null} */ (
+						select.querySelector(':checked')
+					);
 					if (selected_option !== null) {
 						value = get_option_value(selected_option);
 						setter(value);
@@ -532,11 +534,9 @@ export function bind_content_editable(maybe_tracked, property, set_func = undefi
 			var value = getter();
 			if (element[property] !== value) {
 				if (value == null) {
-					// @ts-ignore
 					var non_null_value = element[property];
 					setter(non_null_value);
 				} else {
-					// @ts-ignore
 					element[property] = value + '';
 				}
 			}

@@ -15,7 +15,7 @@ export class TrackedDate extends Date {
 		// @ts-ignore
 		super(...params);
 
-		var block = this.#block = safe_scope();
+		var block = (this.#block = safe_scope());
 		this.#time = tracked(super.getTime(), block);
 
 		if (!init) this.#init();
