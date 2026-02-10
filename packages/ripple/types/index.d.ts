@@ -39,8 +39,8 @@ export interface TrackedArray<T> extends Array<T> {}
 
 export const TrackedArray: TrackedArrayConstructor;
 
-export class Context<T> {
-	constructor(initial_value: T);
+export class Context<T = undefined> {
+	constructor(initial_value?: T);
 	get(): T;
 	set(value: T): void;
 	#private;

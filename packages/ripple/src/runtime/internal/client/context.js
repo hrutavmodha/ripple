@@ -7,10 +7,10 @@ import { active_component } from './runtime.js';
  */
 export class Context {
 	/**
-	 * @param {T} initial_value
+	 * @param {T} [initial_value]
 	 */
 	constructor(initial_value) {
-		/** @type {T} */
+		/** @type {T | undefined} */
 		this._v = initial_value;
 	}
 
