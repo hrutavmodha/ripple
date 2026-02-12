@@ -128,6 +128,14 @@ const visitors = {
 	},
 
 	ServerBlock(node, context) {
+		if (context.path.at(-1)?.type !== 'Program') {
+			// fatal since we don't have a transformation defined for this case
+			error(
+				'`#server` block can only be declared at the module level.',
+				context.state.analysis.module.filename,
+				node,
+			);
+		}
 		node.metadata = {
 			...node.metadata,
 			exports: new Set(),
