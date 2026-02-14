@@ -905,7 +905,15 @@ const visitors = {
 		}
 
 		context.state.init?.push(
+			b.stmt(b.call(b.member(b.id('__output'), b.id('push')), b.literal(BLOCK_OPEN))),
+		);
+
+		context.state.init?.push(
 			b.switch(/** @type {AST.Expression} */ (context.visit(node.discriminant)), cases),
+		);
+
+		context.state.init?.push(
+			b.stmt(b.call(b.member(b.id('__output'), b.id('push')), b.literal(BLOCK_CLOSE))),
 		);
 	},
 
