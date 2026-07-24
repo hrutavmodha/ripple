@@ -65,8 +65,7 @@ type EventHandlerObject<
 };
 
 type EventHandlerValue<Target extends globalThis.EventTarget, EventType extends globalThis.Event> =
-	| EventHandler<Target, EventType>
-	| EventHandlerObject<Target, EventType>;
+	EventHandler<Target, EventType> | EventHandlerObject<Target, EventType>;
 
 type RefAttribute<Target extends globalThis.Element> = {
 	[Key in RefKey]?: RefValue<Target>;
@@ -693,27 +692,13 @@ interface SVGAttributes<Target extends globalThis.SVGElement = globalThis.SVGEle
 	textAnchor?: 'start' | 'middle' | 'end' | 'inherit';
 	textDecoration?: Nullable<string>;
 	textRendering?:
-		| 'auto'
-		| 'optimizeSpeed'
-		| 'optimizeLegibility'
-		| 'geometricPrecision'
-		| 'inherit';
+		'auto' | 'optimizeSpeed' | 'optimizeLegibility' | 'geometricPrecision' | 'inherit';
 	transform?: Nullable<string>;
 	transformOrigin?: Nullable<string>;
 	unicodeBidi?:
-		| 'normal'
-		| 'embed'
-		| 'isolate'
-		| 'bidi-override'
-		| 'isolate-override'
-		| 'plaintext'
-		| 'inherit';
+		'normal' | 'embed' | 'isolate' | 'bidi-override' | 'isolate-override' | 'plaintext' | 'inherit';
 	vectorEffect?:
-		| 'none'
-		| 'non-scaling-stroke'
-		| 'non-scaling-size'
-		| 'non-rotation'
-		| 'fixed-position';
+		'none' | 'non-scaling-stroke' | 'non-scaling-size' | 'non-rotation' | 'fixed-position';
 	visibility?: 'visible' | 'hidden' | 'collapse' | 'inherit';
 	wordSpacing?: string | number;
 	writingMode?: 'horizontal-tb' | 'vertical-rl' | 'vertical-lr' | 'inherit';

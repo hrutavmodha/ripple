@@ -285,13 +285,7 @@ export type RippleObjectShallow<T> = {
 };
 
 export type RippleObjectDeep<T> = T extends
-	| string
-	| number
-	| boolean
-	| null
-	| undefined
-	| symbol
-	| bigint
+	string | number | boolean | null | undefined | symbol | bigint
 	? T | Tracked<T>
 	: T extends RippleArray<infer U>
 		? RippleArray<U> | Tracked<RippleArray<U>>
@@ -304,9 +298,8 @@ export type RippleObjectDeep<T> = T extends
 					: T extends Set<infer U>
 						? Set<RippleObjectDeep<U>> | Tracked<Set<RippleObjectDeep<U>>>
 						: T extends Map<infer K, infer V>
-							?
-									| Map<RippleObjectDeep<K>, RippleObjectDeep<V>>
-									| Tracked<Map<RippleObjectDeep<K>, RippleObjectDeep<V>>>
+							? | Map<RippleObjectDeep<K>, RippleObjectDeep<V>>
+								| Tracked<Map<RippleObjectDeep<K>, RippleObjectDeep<V>>>
 							: T extends object
 								? { [K in keyof T]: RippleObjectDeep<T[K]> | Tracked<RippleObjectDeep<T[K]>> }
 								: T | Tracked<T>;
