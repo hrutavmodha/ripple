@@ -69,7 +69,6 @@ import {
 	build_index_read,
 	build_index_write,
 	build_index_update,
-	expression_contains_call,
 	get_indexed_reactive_target,
 	rewrite_lazy_member_base,
 	strip_tsrx_style_elements,
@@ -80,6 +79,9 @@ import {
 	get_code_block_template_child,
 	lower_code_block_children,
 	is_code_block_function_body,
+	is_text_primitive_expression,
+	collect_head_elements,
+	is_flattenable_template_fragment,
 } from '../../utils.js';
 import {
 	get_attribute_name,
@@ -494,70 +496,6 @@ function is_template_value_binding(expression, scope) {
 }
 
 /**
- * @param {AST.Expression | AST.SpreadElement} expression
- * @param {ScopeInterface} scope
- * @param {TransformServerContext} context
- * @returns {boolean}
- */
-function is_collection_value_expression(expression, scope, context) {
-	if (expression.type === 'ArrayExpression') {
-		return true;
-	}
-
-	if (
-		expression.type === 'TSAsExpression' ||
-		expression.type === 'TSSatisfiesExpression' ||
-		expression.type === 'TSNonNullExpression'
-	) {
-		return is_collection_value_expression(expression.expression, scope, context);
-	}
-
-	if (expression.type === 'ConditionalExpression') {
-		return (
-			is_collection_value_expression(expression.consequent, scope, context) ||
-			is_collection_value_expression(expression.alternate, scope, context)
-		);
-	}
-
-	if (expression.type === 'LogicalExpression') {
-		return (
-			is_collection_value_expression(expression.left, scope, context) ||
-			is_collection_value_expression(expression.right, scope, context)
-		);
-	}
-
-	if (expression.type === 'CallExpression') {
-		if (is_ripple_track_call(expression.callee, context)) {
-			const first_arg = expression.arguments[0];
-			return (
-				first_arg != null &&
-				is_collection_value_expression(
-					/** @type {AST.Expression | AST.SpreadElement} */ (first_arg),
-					scope,
-					context,
-				)
-			);
-		}
-
-		if (expression.callee.type === 'Identifier') {
-			return function_returns_value(scope.get(expression.callee.name)?.initial, (expression) =>
-				is_collection_value_expression(expression, scope, context),
-			);
-		}
-	}
-
-	if (expression.type !== 'Identifier') {
-		return false;
-	}
-
-	const initial = scope.get(expression.name)?.initial;
-	return (
-		initial != null &&
-		is_collection_value_expression(/** @type {AST.Expression} */ (initial), scope, context)
-	);
-}
-
-/**
  * @param {AST.TSRXImportDeclaration} node
  * @returns {string | null}
  */
@@ -701,15 +639,13 @@ function tsrx_expression_emits_marker(node, context) {
 	if (is_static_native_tsrx_function_call(expression, context)) {
 		return false;
 	}
-	const scope = context.state.scope;
-	return (
-		is_children_template_expression(expression, scope) ||
-		contains_template_value_node(/** @type {AST.Node} */ (expression)) ||
-		is_template_value_call(expression, scope) ||
-		is_template_value_binding(expression, scope) ||
-		is_collection_value_expression(expression, scope, context) ||
-		expression_contains_call(expression)
-	);
+	// The single routing truth — the `JSXExpressionContainer` visitor calls
+	// this same function, so the fragment-boundary prediction can never drift
+	// from what SSR actually emits: only an expression that is not provably a
+	// text primitive lowers to `render_expression` (marker-bracketed);
+	// provable primitives — including call-containing ones like `String(f())`
+	// — inline as escaped text with no markers.
+	return !is_text_primitive_expression(expression, context.state);
 }
 
 /**
@@ -835,11 +771,44 @@ function is_native_tsrx_statement_position(path) {
 }
 
 /**
- * @param {AST.Node[]} path
+ * Whether `node` is one of `parent`'s rendered template children, looking
+ * through fragments that `normalize_child` flattens — their children render
+ * inline in the parent, so they are the parent's children for classification.
+ * @param {AST.Node | undefined} parent
+ * @param {AST.Node} node
  * @returns {boolean}
  */
-function is_native_tsrx_value_position(path) {
+function is_rendered_template_child(parent, node) {
+	const children = /** @type {ESTreeJSX.JSXElement | undefined} */ (parent)?.children;
+	if (!children) return false;
+	for (const child of children) {
+		if (child === node) return true;
+		if (
+			is_flattenable_template_fragment(/** @type {AST.Node} */ (child), false) &&
+			is_rendered_template_child(/** @type {AST.Node} */ (child), node)
+		) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * @param {AST.Node[]} path
+ * @param {AST.Node} [node] The node being classified. Expression-container and
+ *   attribute values are visited with the container unwrapped (see
+ *   `get_attribute_value` / `get_template_expression`), so their path parent is
+ *   the host template element itself — indistinguishable from a rendered child
+ *   by parent type alone. A rendered child sits in the parent's `children`; a
+ *   value does not, so `<div>{<h1 />}</div>` and `prop={<h1 />}` classify as
+ *   values while `<div><h1 /></div>` stays a template child.
+ * @returns {boolean}
+ */
+function is_native_tsrx_value_position(path, node) {
 	const parent = path.at(-1);
+	if (node && (is_template_element(parent) || is_template_fragment(parent))) {
+		return !is_rendered_template_child(parent, node);
+	}
 	return !(
 		is_native_tsrx_statement_position(path) ||
 		is_template_element(parent) ||
@@ -1163,9 +1132,7 @@ function transform_children(children, context) {
 		}
 	}
 
-	const head_elements = /** @type {ESTreeJSX.JSXElement[]} */ (
-		children.filter((node) => is_head_element(node))
-	);
+	const head_elements = collect_head_elements(children, !!state.to_ts);
 
 	if (head_elements.length) {
 		state.init?.push(b.stmt(b.call(b.id('_$_.set_output_target'), b.literal('head'))));
@@ -1873,7 +1840,7 @@ const visitors = {
 		// body (handled by `transform_native_tsrx_function`).
 		if (
 			!is_code_block_function_body(node, context.path.at(-1)) &&
-			is_native_tsrx_value_position(context.path)
+			is_native_tsrx_value_position(context.path, node)
 		) {
 			return context.visit(wrap_code_block_in_iife(node), context.state);
 		}
@@ -1900,7 +1867,7 @@ const visitors = {
 		// A raw (non-template) fragment — an attribute value or other JSX that
 		// never entered the template traversal.
 		if (!is_template_fragment(node)) {
-			if (context.state.jsx_to_tsrx_element || is_native_tsrx_value_position(context.path)) {
+			if (context.state.jsx_to_tsrx_element || is_native_tsrx_value_position(context.path, node)) {
 				return build_jsx_to_tsrx_element(/** @type {AST.TSRXJSXFragment} */ (node), context);
 			}
 			return context.next();
@@ -2254,7 +2221,7 @@ const visitors = {
 
 		if (
 			state.regular_js ||
-			is_native_tsrx_value_position(context.path) ||
+			is_native_tsrx_value_position(context.path, node) ||
 			is_regular_js_statement_position(context.path)
 		) {
 			const expression = build_style_class_map_expression(node, context);
@@ -2276,7 +2243,7 @@ const visitors = {
 		// A raw (non-template) element — an attribute value or other JSX that
 		// never entered the template traversal.
 		if (!is_template_element(node)) {
-			if (state.jsx_to_tsrx_element || is_native_tsrx_value_position(context.path)) {
+			if (state.jsx_to_tsrx_element || is_native_tsrx_value_position(context.path, node)) {
 				return build_jsx_to_tsrx_element(/** @type {AST.TSRXJSXElement} */ (node), context);
 			}
 			return context.next();
@@ -2292,7 +2259,7 @@ const visitors = {
 			state.regular_js ||
 			(!state.template_child &&
 				!node.metadata?.returned_tsrx_child &&
-				(is_native_tsrx_value_position(context.path) ||
+				(is_native_tsrx_value_position(context.path, node) ||
 					(context.state.component === undefined &&
 						is_native_tsrx_statement_position(context.path))))
 		) {
@@ -2614,12 +2581,17 @@ const visitors = {
 						const attr_name = get_attribute_name(attr);
 						const attr_value = get_attribute_value(attr);
 						const metadata = { tracking: false };
+						// An attribute value is not a template child — clearing the flag
+						// lets template JSX inside it (an element, fragment, or directive,
+						// at any nesting depth) lower to a `tsrx_element` value instead of
+						// leaking to the printer as raw JSX.
 						let property =
 							attr_value === null
 								? b.literal(true)
 								: /** @type {AST.Expression} */ (
 										visit(/** @type {AST.Expression} */ (attr_value), {
 											...state,
+											template_child: false,
 											metadata,
 										})
 									);
@@ -2972,14 +2944,6 @@ const visitors = {
 			contains_template_value_node(/** @type {AST.Node} */ (node.expression)) ||
 			is_template_value_call(/** @type {AST.Expression} */ (node.expression), state.scope) ||
 			is_template_value_binding(node.expression, state.scope);
-		const is_collection_expression = is_collection_value_expression(
-			/** @type {AST.Expression} */ (node.expression),
-			state.scope,
-			context,
-		);
-		const is_runtime_expression = expression_contains_call(
-			/** @type {AST.Expression} */ (node.expression),
-		);
 		let expression = /** @type {AST.Expression} */ (
 			visit(node.expression, {
 				...state,
@@ -2987,13 +2951,29 @@ const visitors = {
 			})
 		);
 
+		// `<title>` holds text only (per spec) — hydration markers must never be
+		// emitted into it (`document.title` would contain them), so its
+		// expression children always render through the escaping text path.
+		const container_parent = context.path.at(-1);
+		const inside_title =
+			is_template_element(container_parent) &&
+			get_element_identifier(/** @type {ESTreeJSX.JSXElement} */ (container_parent))?.name ===
+				'title';
+
 		if (expression.type === 'Literal') {
 			state.init?.push(
 				b.stmt(b.call(b.id('_$_.output_push'), b.literal(escape(expression.value)))),
 			);
 		} else if (is_static_native_tsrx_call) {
 			state.init?.push(b.stmt(b.call('_$_.render_tsrx_element', expression)));
-		} else if (is_children_expression || is_collection_expression || is_runtime_expression) {
+		} else if (
+			!inside_title &&
+			// Shared routing truth (see `tsrx_expression_emits_marker`): only an
+			// expression that is not provably a text primitive renders through
+			// `render_expression` — which renders elements and collections,
+			// escapes plain values, and brackets with hydration markers.
+			tsrx_expression_emits_marker(node, context)
+		) {
 			state.init?.push(b.stmt(b.call('_$_.render_expression', expression)));
 		} else {
 			state.init?.push(b.stmt(b.call(b.id('_$_.output_push'), b.call('_$_.escape', expression))));

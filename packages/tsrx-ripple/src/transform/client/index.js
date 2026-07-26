@@ -112,6 +112,9 @@ import {
 	get_code_block_render,
 	get_code_block_template_child,
 	lower_code_block_children,
+	is_text_primitive_expression,
+	collect_head_elements,
+	is_flattenable_template_fragment,
 } from '../../utils.js';
 import {
 	get_attribute_name,
@@ -322,233 +325,6 @@ function insert_style_ref_setup_statements(body, setup, scopes) {
 		return result;
 	}
 	return [...setup, ...body];
-}
-
-/**
- * @param {AST.TypeNode | undefined | null} type_annotation
- * @returns {AST.TypeNode | undefined}
- */
-function unwrap_type_annotation(type_annotation) {
-	/** @type {AST.TypeNode | undefined | null} */
-	let annotation = type_annotation;
-
-	while (annotation) {
-		if (annotation.type === 'TSTypeAnnotation') {
-			annotation = annotation.typeAnnotation;
-			continue;
-		}
-		if (annotation.type === 'TSParenthesizedType') {
-			annotation = annotation.typeAnnotation;
-			continue;
-		}
-		break;
-	}
-
-	return annotation ?? undefined;
-}
-
-/**
- * @param {AST.TypeNode | undefined | null} type_annotation
- * @returns {boolean}
- */
-function is_string_type_annotation(type_annotation) {
-	const annotation = unwrap_type_annotation(type_annotation);
-	if (!annotation) return false;
-
-	if (annotation.type === 'TSStringKeyword') return true;
-	if (annotation.type === 'TSLiteralType' && annotation.literal.type === 'Literal') {
-		return typeof annotation.literal.value === 'string';
-	}
-	if (annotation.type === 'TSUnionType') {
-		return annotation.types.every((type) => is_string_type_annotation(type));
-	}
-
-	return false;
-}
-
-/**
- * @param {AST.TypeNode | undefined | null} type_annotation
- * @param {string} property_name
- * @returns {AST.TypeNode | undefined}
- */
-function get_property_type_annotation(type_annotation, property_name) {
-	const annotation = unwrap_type_annotation(type_annotation);
-
-	if (annotation?.type === 'TSIntersectionType') {
-		for (const type of annotation.types) {
-			const property_type = get_property_type_annotation(type, property_name);
-			if (property_type) return property_type;
-		}
-		return undefined;
-	}
-
-	if (annotation?.type !== 'TSTypeLiteral') {
-		return undefined;
-	}
-
-	for (const member of annotation.members) {
-		if (member.type !== 'TSPropertySignature' || member.computed) continue;
-
-		const key = member.key;
-		const name =
-			key.type === 'Identifier'
-				? key.name
-				: key.type === 'Literal' && typeof key.value === 'string'
-					? key.value
-					: null;
-
-		if (name === property_name) {
-			return member.typeAnnotation?.typeAnnotation;
-		}
-	}
-
-	return undefined;
-}
-
-/**
- * @param {Binding | null | undefined} binding
- * @returns {AST.TypeNode | undefined}
- */
-function get_binding_type_annotation(binding) {
-	const node = binding?.node;
-	if (!node) return undefined;
-
-	return (
-		/** @type {{ typeAnnotation?: AST.TSTypeAnnotation | AST.TypeNode }} */ (binding.metadata ?? {})
-			.typeAnnotation ??
-		/** @type {{ typeAnnotation?: AST.TSTypeAnnotation }} */ (node).typeAnnotation?.typeAnnotation
-	);
-}
-
-/**
- * @param {AST.Expression} expression
- * @returns {string | null}
- */
-function get_static_property_name(expression) {
-	if (expression.type !== 'MemberExpression' || expression.property.type === 'PrivateIdentifier') {
-		return null;
-	}
-
-	if (!expression.computed && expression.property.type === 'Identifier') {
-		return expression.property.name;
-	}
-
-	if (
-		expression.computed &&
-		expression.property.type === 'Literal' &&
-		typeof expression.property.value === 'string'
-	) {
-		return expression.property.value;
-	}
-
-	return null;
-}
-
-/**
- * @param {AST.Expression | AST.Pattern} expression
- * @returns {boolean}
- */
-function is_string_literal_expression(expression) {
-	return expression.type === 'Literal' && typeof expression.value === 'string';
-}
-
-/**
- * @param {AST.Expression} expression
- * @param {TransformClientState} state
- * @param {Set<Binding>} [visited]
- * @returns {boolean}
- */
-function is_stringish_expression(expression, state, visited = new Set()) {
-	if (expression.type === 'ParenthesizedExpression' || expression.type === 'ChainExpression') {
-		return is_stringish_expression(
-			/** @type {AST.Expression} */ (expression.expression),
-			state,
-			visited,
-		);
-	}
-
-	if (expression.type === 'TSAsExpression' || expression.type === 'TSTypeAssertion') {
-		return (
-			is_string_type_annotation(expression.typeAnnotation) ||
-			is_stringish_expression(/** @type {AST.Expression} */ (expression.expression), state, visited)
-		);
-	}
-
-	if (
-		expression.type === 'TSNonNullExpression' ||
-		expression.type === 'TSInstantiationExpression'
-	) {
-		return is_stringish_expression(
-			/** @type {AST.Expression} */ (expression.expression),
-			state,
-			visited,
-		);
-	}
-
-	if (is_string_literal_expression(expression) || expression.type === 'TemplateLiteral') {
-		return true;
-	}
-
-	if (
-		expression.type === 'CallExpression' &&
-		expression.callee.type === 'Identifier' &&
-		expression.callee.name === 'String'
-	) {
-		return true;
-	}
-
-	if (expression.type === 'BinaryExpression' && expression.operator === '+') {
-		const left = /** @type {AST.Expression} */ (expression.left);
-		const right = /** @type {AST.Expression} */ (expression.right);
-		// `string + anything` (and `anything + string`) always evaluates to a
-		// string in JS, so one provably-stringish operand is enough — the result
-		// can never be an element or collection. (String literals are stringish,
-		// so this subsumes the literal-operand cases.)
-		return (
-			is_stringish_expression(left, state, visited) ||
-			is_stringish_expression(right, state, visited)
-		);
-	}
-
-	if (expression.type === 'ConditionalExpression') {
-		return (
-			is_stringish_expression(expression.consequent, state, visited) &&
-			is_stringish_expression(expression.alternate, state, visited)
-		);
-	}
-
-	if (expression.type === 'Identifier') {
-		const binding = state.scope.get(expression.name);
-		if (!binding || binding.node === expression || visited.has(binding)) {
-			return false;
-		}
-		if (is_string_type_annotation(get_binding_type_annotation(binding))) {
-			return true;
-		}
-		if (binding.initial && !binding.reassigned && !binding.mutated && !binding.updated) {
-			visited.add(binding);
-			return is_stringish_expression(
-				/** @type {AST.Expression} */ (binding.initial),
-				state,
-				visited,
-			);
-		}
-		return false;
-	}
-
-	if (expression.type === 'MemberExpression' && expression.object.type === 'Identifier') {
-		const property_name = get_static_property_name(expression);
-		if (property_name === null) return false;
-
-		const binding = state.scope.get(expression.object.name);
-		const property_type = get_property_type_annotation(
-			get_binding_type_annotation(binding),
-			property_name,
-		);
-		return is_string_type_annotation(property_type);
-	}
-
-	return false;
 }
 
 /**
@@ -2458,7 +2234,7 @@ const visitors = {
 		// from re-wrapping it endlessly.
 		if (
 			!is_code_block_function_body(node, context.path.at(-1)) &&
-			is_native_tsrx_value_position(context.path)
+			is_native_tsrx_value_position(context.path, node)
 		) {
 			return context.visit(wrap_code_block_in_iife(node), context.state);
 		}
@@ -2506,7 +2282,7 @@ const visitors = {
 			if (state.to_ts) {
 				return context.next();
 			}
-			if (state.jsx_to_tsrx_element || is_native_tsrx_value_position(context.path)) {
+			if (state.jsx_to_tsrx_element || is_native_tsrx_value_position(context.path, node)) {
 				return build_jsx_to_tsrx_element(/** @type {AST.TSRXJSXFragment} */ (node), context);
 			}
 			return context.next();
@@ -2579,7 +2355,7 @@ const visitors = {
 
 		if (
 			state.regular_js ||
-			is_native_tsrx_value_position(context.path) ||
+			is_native_tsrx_value_position(context.path, node) ||
 			is_regular_js_statement_position(context.path)
 		) {
 			const expression = build_style_class_map_expression(node, context);
@@ -2622,7 +2398,7 @@ const visitors = {
 			if (state.to_ts) {
 				return context.next();
 			}
-			if (state.jsx_to_tsrx_element || is_native_tsrx_value_position(context.path)) {
+			if (state.jsx_to_tsrx_element || is_native_tsrx_value_position(context.path, node)) {
 				return build_jsx_to_tsrx_element(/** @type {AST.TSRXJSXElement} */ (node), context);
 			}
 			return context.next();
@@ -2660,7 +2436,7 @@ const visitors = {
 			(!state.inside_head &&
 				!state.template_child &&
 				!node.metadata?.returned_tsrx_child &&
-				(is_native_tsrx_value_position(context.path) ||
+				(is_native_tsrx_value_position(context.path, node) ||
 					(context.state.component === undefined &&
 						is_native_tsrx_statement_position(context.path))))
 		) {
@@ -5147,11 +4923,44 @@ function is_native_tsrx_statement_position(path) {
 }
 
 /**
- * @param {AST.Node[]} path
+ * Whether `node` is one of `parent`'s rendered template children, looking
+ * through fragments that `normalize_child` flattens — their children render
+ * inline in the parent, so they are the parent's children for classification.
+ * @param {AST.Node | undefined} parent
+ * @param {AST.Node} node
  * @returns {boolean}
  */
-function is_native_tsrx_value_position(path) {
+function is_rendered_template_child(parent, node) {
+	const children = /** @type {ESTreeJSX.JSXElement | undefined} */ (parent)?.children;
+	if (!children) return false;
+	for (const child of children) {
+		if (child === node) return true;
+		if (
+			is_flattenable_template_fragment(/** @type {AST.Node} */ (child), false) &&
+			is_rendered_template_child(/** @type {AST.Node} */ (child), node)
+		) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * @param {AST.Node[]} path
+ * @param {AST.Node} [node] The node being classified. Expression-container and
+ *   attribute values are visited with the container unwrapped (see
+ *   `get_attribute_value` / `get_template_expression`), so their path parent is
+ *   the host template element itself — indistinguishable from a rendered child
+ *   by parent type alone. A rendered child sits in the parent's `children`; a
+ *   value does not, so `<div>{<h1 />}</div>` and `prop={<h1 />}` classify as
+ *   values while `<div><h1 /></div>` stays a template child.
+ * @returns {boolean}
+ */
+function is_native_tsrx_value_position(path, node) {
 	const parent = path.at(-1);
+	if (node && (is_template_element(parent) || is_template_fragment(parent))) {
+		return !is_rendered_template_child(parent, node);
+	}
 	return !(
 		is_native_tsrx_statement_position(path) ||
 		is_template_element(parent) ||
@@ -5420,11 +5229,7 @@ function transform_children(children, context) {
 		state: { ...state, keep_component_style: state.to_ts ? true : state.keep_component_style },
 	});
 
-	const head_elements = /** @type {ESTreeJSX.JSXElement[]} */ (
-		children.filter(
-			(node) => is_template_element(node) && get_element_identifier(node)?.name === 'head',
-		)
-	);
+	const head_elements = collect_head_elements(children, !!state.to_ts);
 
 	const is_fragment =
 		normalized.some(
@@ -5870,7 +5675,7 @@ function transform_children(children, context) {
 					);
 				} else if (
 					!is_children_template_expression(container_expression, state.scope) &&
-					is_stringish_expression(container_expression, state)
+					is_text_primitive_expression(container_expression, state)
 				) {
 					render_text_expression(container_expression, expr);
 				} else if (

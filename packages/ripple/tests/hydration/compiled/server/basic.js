@@ -131,7 +131,7 @@ export function Greeting(props) {
 		_$_.regular_block(() => {
 			let __out = '';
 
-			__out += '<div>' + _$_.escape('Hello ' + String(props.name ?? '')) + '</div>';
+			__out += '<div>' + _$_.escape('Hello ' + props.name) + '</div>';
 			_$_.output_push(__out);
 		});
 	});
@@ -215,7 +215,15 @@ export function NestedTsxTsrxExpressionValues() {
 			__out += '<div class="nested-expression-values"><!--[-->';
 
 			for (const item of [1, 2, 3]) {
-				__out += '<div class="app-item">' + _$_.escape(item) + '</div>';
+				__out += '<div class="app-item">';
+
+				{
+					_$_.output_push(__out);
+					__out = '';
+					_$_.render_expression(item);
+				}
+
+				__out += '</div>';
 			}
 
 			__out += '<!--]-->';
@@ -900,6 +908,117 @@ export function NestedComponentAsLastSibling() {
 			}
 
 			__out += '</section>';
+			_$_.output_push(__out);
+		});
+	});
+}
+
+function fetchLabel() {
+	return 'fetched';
+}
+
+export function TextTailExpression() {
+	return _$_.tsrx_element(() => {
+		_$_.regular_block(() => {
+			let __out = '';
+
+			__out += '<div>' + _$_.escape("label: " + String(fetchLabel())) + '</div>';
+			_$_.output_push(__out);
+		});
+	});
+}
+
+export function FragmentTailExpression() {
+	return _$_.tsrx_element(() => {
+		_$_.regular_block(() => {
+			let __out = '';
+
+			__out += '<div>' + _$_.escape('frag-' + String(fetchLabel())) + '</div>';
+			_$_.output_push(__out);
+		});
+	});
+}
+
+export function FragmentChildOnly() {
+	return _$_.tsrx_element(() => {
+		_$_.regular_block(() => {
+			let __out = '';
+
+			__out += '<div>frag-<span>tail</span></div>';
+			_$_.output_push(__out);
+		});
+	});
+}
+
+function OpaqueLead(props) {
+	return _$_.tsrx_element(() => {
+		_$_.regular_block(() => {
+			let __out = '';
+
+			__out += '<!--[-->';
+			_$_.output_push(__out);
+			__out = '';
+			_$_.render_expression(props.header);
+			__out += '<p>after-opaque</p><!--]-->';
+			_$_.output_push(__out);
+		});
+	});
+}
+
+export function FragmentLeadsWithOpaqueValue() {
+	return _$_.tsrx_element(() => {
+		_$_.regular_block(() => {
+			let __out = '';
+
+			__out += '<div>';
+
+			{
+				{
+					const comp = OpaqueLead;
+					const args = [{ header: 'H' }];
+
+					_$_.output_push(__out);
+					__out = '';
+					_$_.render_component(comp, ...args);
+				}
+			}
+
+			__out += '</div>';
+			_$_.output_push(__out);
+		});
+	});
+}
+
+function PrimitiveCallLead() {
+	return _$_.tsrx_element(() => {
+		_$_.regular_block(() => {
+			let __out = '';
+
+			__out += _$_.escape(String(fetchLabel())) + '<p>after-call</p>';
+			_$_.output_push(__out);
+		});
+	});
+}
+
+export function FragmentLeadsWithPrimitiveCall() {
+	return _$_.tsrx_element(() => {
+		_$_.regular_block(() => {
+			let __out = '';
+
+			__out += '<div>';
+
+			{
+				{
+					const comp = PrimitiveCallLead;
+					const args = [{}];
+
+					_$_.output_push(__out);
+					__out = '';
+					_$_.render_component(comp, ...args);
+				}
+			}
+
+			__out += '</div>';
 			_$_.output_push(__out);
 		});
 	});

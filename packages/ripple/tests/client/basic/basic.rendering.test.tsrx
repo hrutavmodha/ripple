@@ -607,6 +607,64 @@ second
 		expect(div.textContent).toEqual('a Hello');
 	});
 
+	it('renders a template element inside an expression container child', () => {
+		function App() @{
+			<div>
+				{<h1>inline</h1>}
+			</div>
+		}
+
+		render(App);
+		expect(container.querySelector('div h1').textContent).toEqual('inline');
+	});
+
+	it('updates control flow inside an element in an expression container child', () => {
+		function App() @{
+			let &[ok] = track(true);
+			<>
+				<button
+					onClick={() => {
+						ok = !ok;
+					}}
+				>{'toggle'}</button>
+				<div>
+					{<h1>
+						@if (ok) {
+							<span>{'yes'}</span>
+						} @else {
+							<span>{'no'}</span>
+						}
+					</h1>}
+				</div>
+			</>
+		}
+
+		render(App);
+		expect(container.querySelector('div h1 span').textContent).toEqual('yes');
+
+		container.querySelector('button').click();
+		flushSync();
+		expect(container.querySelector('div h1 span').textContent).toEqual('no');
+	});
+
+	it('renders a call-containing text expression after inlined text', () => {
+		// The `' '` text anchor for the expression used to coalesce with the
+		// preceding inlined text into a single template text node, leaving
+		// `sibling(…, true)` nothing to anchor to — a runtime crash. (Only
+		// call-containing expressions hit this: call-free ones merge with the
+		// preceding text upstream instead.)
+		function fetchCount() {
+			return 42;
+		}
+
+		function App() @{
+			<div>count: {String(fetchCount())}</div>
+		}
+
+		render(App);
+		expect(container.querySelector('div').textContent).toEqual('count: 42');
+	});
+
 	it('should handle multiple consecutive text expressions', () => {
 		function App() @{
 			let name = 'World';

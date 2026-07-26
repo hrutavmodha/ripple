@@ -71,6 +71,15 @@ var root_66 = _$_.template(`<footer class="last-child">I am the last child</foot
 var root_67 = _$_.template(`<div class="wrapper"><h1>Header</h1><p>Some content</p><!></div>`, 0);
 var root_68 = _$_.template(`<div class="inner"><span>Inner text</span><!></div>`, 0);
 var root_69 = _$_.template(`<section class="outer"><h2>Section title</h2><!></section>`, 0);
+var root_70 = _$_.template(`<div> </div>`, 0);
+var root_71 = _$_.template(`<div> </div>`, 0);
+var root_72 = _$_.template(`<div>frag-<span>tail</span></div>`, 0);
+var root_74 = _$_.template(`<!><p>after-opaque</p>`, 1, 2);
+var root_73 = _$_.template(`<!>`, 1, 1);
+var root_75 = _$_.template(`<div></div>`, 0);
+var root_77 = _$_.template(` <p>after-call</p>`, 1, 2);
+var root_76 = _$_.template(`<!>`, 1, 1);
+var root_78 = _$_.template(`<div></div>`, 0);
 
 import { track } from 'ripple';
 
@@ -193,7 +202,7 @@ export function Greeting(props) {
 		}
 
 		_$_.render(() => {
-			_$_.set_text(expression, 'Hello ' + _$_.with_scope(__block, () => String(props.name ?? '')));
+			_$_.set_text(expression, 'Hello ' + props.name);
 		});
 
 		_$_.append(__anchor, div_5);
@@ -218,9 +227,9 @@ export function ExpressionContent() {
 			var div_6 = _$_.first_child_frag(fragment_7);
 
 			{
-				var expression_1 = _$_.child(div_6);
+				var expression_1 = _$_.child(div_6, true);
 
-				_$_.expression(expression_1, () => value);
+				expression_1.nodeValue = value;
 				_$_.pop(div_6);
 			}
 
@@ -246,9 +255,9 @@ function NestedHelperItem({ item }) {
 		var div_7 = root_15();
 
 		{
-			var expression_3 = _$_.child(div_7);
+			var expression_3 = _$_.child(div_7, true);
 
-			_$_.expression(expression_3, () => item);
+			expression_3.nodeValue = item;
 			_$_.pop(div_7);
 		}
 
@@ -914,6 +923,125 @@ export function NestedComponentAsLastSibling() {
 		}
 
 		_$_.append(__anchor, section_1);
+	});
+}
+
+function fetchLabel() {
+	return 'fetched';
+}
+
+export function TextTailExpression() {
+	return _$_.tsrx_element((__anchor, __block) => {
+		var div_27 = root_70();
+
+		{
+			var text = _$_.child(div_27, true);
+
+			_$_.pop(div_27);
+		}
+
+		_$_.render(() => {
+			_$_.set_text(text, "label: " + _$_.with_scope(__block, () => String(fetchLabel())));
+		});
+
+		_$_.append(__anchor, div_27);
+	});
+}
+
+export function FragmentTailExpression() {
+	return _$_.tsrx_element((__anchor, __block) => {
+		var div_28 = root_71();
+
+		{
+			var expression_29 = _$_.child(div_28, true);
+
+			_$_.pop(div_28);
+		}
+
+		_$_.render(() => {
+			_$_.set_text(expression_29, 'frag-' + _$_.with_scope(__block, () => String(fetchLabel())));
+		});
+
+		_$_.append(__anchor, div_28);
+	});
+}
+
+export function FragmentChildOnly() {
+	return _$_.tsrx_element((__anchor, __block) => {
+		var div_29 = root_72();
+
+		{
+			_$_.pop(div_29);
+		}
+
+		_$_.append(__anchor, div_29);
+	});
+}
+
+function OpaqueLead(props) {
+	return _$_.tsrx_element((__anchor, __block) => {
+		var fragment_30 = root_73();
+		var node_26 = _$_.first_child_frag(fragment_30);
+
+		_$_.expression(node_26, () => _$_.tsrx_element((__anchor, __block) => {
+			var fragment_31 = root_74();
+			var expression_30 = _$_.first_child_frag(fragment_31);
+
+			_$_.expression(expression_30, () => props.header);
+			_$_.append(__anchor, fragment_31);
+		}));
+
+		_$_.append(__anchor, fragment_30);
+	});
+}
+
+export function FragmentLeadsWithOpaqueValue() {
+	return _$_.tsrx_element((__anchor, __block) => {
+		var div_30 = root_75();
+
+		{
+			var append_anchor_1 = _$_.append_into(div_30);
+
+			_$_.render_component(OpaqueLead, append_anchor_1, { header: 'H' });
+			_$_.pop(div_30);
+		}
+
+		_$_.append(__anchor, div_30);
+	});
+}
+
+function PrimitiveCallLead() {
+	return _$_.tsrx_element((__anchor, __block) => {
+		var fragment_32 = root_76();
+		var node_27 = _$_.first_child_frag(fragment_32);
+
+		_$_.expression(node_27, () => _$_.tsrx_element((__anchor, __block) => {
+			var fragment_33 = root_77();
+			var expression_31 = _$_.first_child_frag(fragment_33, true);
+
+			_$_.render(() => {
+				_$_.set_text(expression_31, _$_.with_scope(__block, () => String(fetchLabel())));
+			});
+
+			_$_.append(__anchor, fragment_33);
+		}));
+
+		_$_.append(__anchor, fragment_32);
+	});
+}
+
+export function FragmentLeadsWithPrimitiveCall() {
+	return _$_.tsrx_element((__anchor, __block) => {
+		var div_31 = root_78();
+
+		{
+			var append_anchor_2 = _$_.append_into(div_31);
+
+			_$_.render_component(PrimitiveCallLead, append_anchor_2, {});
+			_$_.pop(div_31);
+		}
+
+		_$_.append(__anchor, div_31);
 	});
 }
 

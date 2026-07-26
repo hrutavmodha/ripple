@@ -2043,25 +2043,42 @@ export function normalize_children(children, context) {
 		) {
 			const child_expression = get_template_expression(child, to_ts);
 			const prev_expression = get_template_expression(prev_child, to_ts);
+			// A call-containing expression must not merge into a stringified text
+			// run when the call could return a template value — but when the whole
+			// expression is provably a text primitive (`String(f())`, `void f()`),
+			// stringifying is exactly its render semantics, and merging keeps the
+			// run a single text node on both client and server (required for
+			// hydration to pair static and dynamic text).
 			if (
 				(is_template_expression(child) &&
 					is_children_template_expression(child_expression, context.state.scope)) ||
 				(is_template_expression(prev_child) &&
 					is_children_template_expression(prev_expression, context.state.scope)) ||
-				expression_contains_call(child_expression) ||
-				expression_contains_call(prev_expression)
+				(expression_contains_call(child_expression) &&
+					!is_text_primitive_expression(child_expression, context.state)) ||
+				(expression_contains_call(prev_expression) &&
+					!is_text_primitive_expression(prev_expression, context.state))
 			) {
 				continue;
 			}
 
+			// Each merged operand renders as `String(value ?? '')` — nullish must
+			// contribute NOTHING (a bare undefined would concat as "undefined").
+			// The wrapper is skipped only when provably unnecessary: a provably-
+			// string operand (never nullish, already a string) or a non-nullish
+			// primitive literal. Both cases guarantee at least one string operand
+			// per pair (a literal-only pair folds below), so `+` always
+			// concatenates.
+			/** @param {AST.Expression} operand */
+			const merge_operand = (operand) =>
+				is_text_primitive_expression(operand, context.state, undefined, true) ||
+				(operand.type === 'Literal' && !('regex' in operand) && operand.value != null)
+					? operand
+					: b.call('String', b.logical('??', operand, b.literal('')));
 			const merged_expression =
 				child_expression.type === 'Literal' && prev_expression.type === 'Literal'
 					? b.literal(prev_expression.value + String(child_expression.value))
-					: b.binary(
-							'+',
-							prev_expression,
-							b.call('String', b.logical('??', child_expression, b.literal(''))),
-						);
+					: b.binary('+', merge_operand(prev_expression), merge_operand(child_expression));
 			const merged = b.jsx_expression_container(
 				merged_expression,
 				/** @type {AST.NodeWithLocation} */ (prev_child),
@@ -2307,6 +2324,48 @@ function is_template_fragment_binding(binding, scope, visited = new Set()) {
 }
 
 /**
+ * A template fragment in children position that renders inline (see
+ * `normalize_child`). Code-block chains are deliberate lexical scopes,
+ * generated value wrappers carry their own lowering, and a component's root
+ * render fragment is the anchor the root-template machinery keys off — only
+ * plain grouping flattens. The to_ts view keeps authored fragments verbatim.
+ * @param {AST.Node} node
+ * @param {boolean} to_ts
+ * @returns {node is ESTreeJSX.JSXFragment}
+ */
+export function is_flattenable_template_fragment(node, to_ts) {
+	return (
+		!to_ts &&
+		is_template_fragment(node) &&
+		node.metadata?.tsrx_code_block_chain !== true &&
+		node.metadata?.tsrx_generated_wrapper !== true &&
+		node.metadata?.returned_tsrx_child !== true &&
+		node.metadata?.tsrx_render_fragment !== true
+	);
+}
+
+/**
+ * Collect the `<head>` elements rendered by a children list, looking through
+ * fragments that `normalize_child` flattens — their children render inline,
+ * so their heads belong to this list too.
+ * @param {AST.Node[]} children
+ * @param {boolean} to_ts
+ * @returns {ESTreeJSX.JSXElement[]}
+ */
+export function collect_head_elements(children, to_ts) {
+	/** @type {ESTreeJSX.JSXElement[]} */
+	const heads = [];
+	for (const node of children) {
+		if (is_template_element(node) && get_element_identifier(node)?.name === 'head') {
+			heads.push(/** @type {ESTreeJSX.JSXElement} */ (node));
+		} else if (is_flattenable_template_fragment(node, to_ts)) {
+			heads.push(...collect_head_elements(/** @type {AST.Node[]} */ (node.children), to_ts));
+		}
+	}
+	return heads;
+}
+
+/**
  * @param {AST.Node} node
  * @param {AST.Node[]} normalized
  * @param {CommonContext} context
@@ -2323,6 +2382,17 @@ function normalize_child(node, normalized, context) {
 		);
 		if (child != null) {
 			normalize_child(child, normalized, context);
+		}
+		return;
+	} else if (is_flattenable_template_fragment(node, !!context.state.to_ts)) {
+		// A template fragment in children position is transparent grouping — its
+		// children render inline, exactly as the same children authored without
+		// the fragment would (and exactly as the server writes them). Flattening
+		// costs zero DOM: no comment anchor, no runtime expression wrapper, and
+		// text runs can merge across the former fragment boundary. The to_ts
+		// view keeps authored fragments verbatim.
+		for (const child of /** @type {ESTreeJSX.JSXFragment} */ (node).children) {
+			normalize_child(/** @type {AST.Node} */ (child), normalized, context);
 		}
 		return;
 	} else if (
@@ -3007,4 +3077,324 @@ function mark_raw_template_jsx(node) {
 export function adopt_raw_template_jsx(node) {
 	mark_raw_template_jsx(node);
 	return node.type === 'JSXFragment' ? node.children : node;
+}
+
+/**
+ * @param {AST.TypeNode | undefined | null} type_annotation
+ * @returns {AST.TypeNode | undefined}
+ */
+export function unwrap_type_annotation(type_annotation) {
+	/** @type {AST.TypeNode | undefined | null} */
+	let annotation = type_annotation;
+
+	while (annotation) {
+		if (annotation.type === 'TSTypeAnnotation') {
+			annotation = annotation.typeAnnotation;
+			continue;
+		}
+		if (annotation.type === 'TSParenthesizedType') {
+			annotation = annotation.typeAnnotation;
+			continue;
+		}
+		break;
+	}
+
+	return annotation ?? undefined;
+}
+
+/**
+ * Whether the type provably describes a text primitive — a string, number,
+ * boolean, or bigint (or null/undefined, which render as ''). Unions qualify
+ * only when every member does. With `strings_only`, only provably-string
+ * types qualify (a plain `+` concatenation and a skipped `?? ''` guard are
+ * then already correct).
+ * @param {AST.TypeNode | undefined | null} type_annotation
+ * @param {boolean} [strings_only]
+ * @returns {boolean}
+ */
+export function is_text_primitive_type_annotation(type_annotation, strings_only = false) {
+	const annotation = unwrap_type_annotation(type_annotation);
+	if (!annotation) return false;
+
+	if (annotation.type === 'TSStringKeyword') {
+		return true;
+	}
+	if (
+		!strings_only &&
+		(annotation.type === 'TSNumberKeyword' ||
+			annotation.type === 'TSBooleanKeyword' ||
+			annotation.type === 'TSBigIntKeyword' ||
+			annotation.type === 'TSNullKeyword' ||
+			annotation.type === 'TSUndefinedKeyword')
+	) {
+		return true;
+	}
+	if (annotation.type === 'TSLiteralType' && annotation.literal.type === 'Literal') {
+		return strings_only
+			? typeof annotation.literal.value === 'string'
+			: is_text_primitive_literal(annotation.literal);
+	}
+	if (annotation.type === 'TSUnionType') {
+		return annotation.types.every((type) => is_text_primitive_type_annotation(type, strings_only));
+	}
+
+	return false;
+}
+
+/**
+ * @param {AST.TypeNode | undefined | null} type_annotation
+ * @param {string} property_name
+ * @returns {AST.TypeNode | undefined}
+ */
+export function get_property_type_annotation(type_annotation, property_name) {
+	const annotation = unwrap_type_annotation(type_annotation);
+
+	if (annotation?.type === 'TSIntersectionType') {
+		for (const type of annotation.types) {
+			const property_type = get_property_type_annotation(type, property_name);
+			if (property_type) return property_type;
+		}
+		return undefined;
+	}
+
+	if (annotation?.type !== 'TSTypeLiteral') {
+		return undefined;
+	}
+
+	for (const member of annotation.members) {
+		if (member.type !== 'TSPropertySignature' || member.computed) continue;
+
+		const key = member.key;
+		const name =
+			key.type === 'Identifier'
+				? key.name
+				: key.type === 'Literal' && typeof key.value === 'string'
+					? key.value
+					: null;
+
+		if (name === property_name) {
+			return member.typeAnnotation?.typeAnnotation;
+		}
+	}
+
+	return undefined;
+}
+
+/**
+ * @param {Binding | null | undefined} binding
+ * @returns {AST.TypeNode | undefined}
+ */
+export function get_binding_type_annotation(binding) {
+	const node = binding?.node;
+	if (!node) return undefined;
+
+	return (
+		/** @type {{ typeAnnotation?: AST.TSTypeAnnotation | AST.TypeNode }} */ (binding.metadata ?? {})
+			.typeAnnotation ??
+		/** @type {{ typeAnnotation?: AST.TSTypeAnnotation }} */ (node).typeAnnotation?.typeAnnotation
+	);
+}
+
+/**
+ * @param {AST.Expression} expression
+ * @returns {string | null}
+ */
+export function get_static_property_name(expression) {
+	if (expression.type !== 'MemberExpression' || expression.property.type === 'PrivateIdentifier') {
+		return null;
+	}
+
+	if (!expression.computed && expression.property.type === 'Identifier') {
+		return expression.property.name;
+	}
+
+	if (
+		expression.computed &&
+		expression.property.type === 'Literal' &&
+		typeof expression.property.value === 'string'
+	) {
+		return expression.property.value;
+	}
+
+	return null;
+}
+
+/**
+ * A literal whose value is a text primitive. Regex literals are objects and
+ * are excluded (their `value` can also be `null` when unserializable).
+ * @param {AST.Expression | AST.Pattern} expression
+ * @returns {boolean}
+ */
+export function is_text_primitive_literal(expression) {
+	if (expression.type !== 'Literal' || 'regex' in expression) {
+		return false;
+	}
+	const value = expression.value;
+	return (
+		value === null ||
+		typeof value === 'string' ||
+		typeof value === 'number' ||
+		typeof value === 'boolean' ||
+		typeof value === 'bigint'
+	);
+}
+
+/**
+ * Whether the expression provably evaluates to a text primitive — a string,
+ * number, boolean, bigint, null, or undefined. These render as plain escaped
+ * text (`String(value ?? '')` on the server, `value + ''` on the client), so
+ * they may use the inline text fast paths. Anything unproven can hold a
+ * template value — an element or a collection — and must render through the
+ * value-aware expression paths instead.
+ *
+ * With `strings_only`, only provably-STRING expressions qualify: string
+ * literals/templates, `String()`, `typeof`, `+` with a provably-string
+ * operand, `as string`, and string-typed bindings/members. A merged text run
+ * can concatenate those bare — no `String(… ?? '')` wrapper needed.
+ * @param {AST.Expression} expression
+ * @param {{ scope: ScopeInterface }} state
+ * @param {Set<Binding>} [visited]
+ * @param {boolean} [strings_only]
+ * @returns {boolean}
+ */
+export function is_text_primitive_expression(
+	expression,
+	state,
+	visited = new Set(),
+	strings_only = false,
+) {
+	if (expression.type === 'ParenthesizedExpression' || expression.type === 'ChainExpression') {
+		return is_text_primitive_expression(
+			/** @type {AST.Expression} */ (expression.expression),
+			state,
+			visited,
+			strings_only,
+		);
+	}
+
+	if (expression.type === 'TSAsExpression' || expression.type === 'TSTypeAssertion') {
+		return (
+			is_text_primitive_type_annotation(expression.typeAnnotation, strings_only) ||
+			is_text_primitive_expression(
+				/** @type {AST.Expression} */ (expression.expression),
+				state,
+				visited,
+				strings_only,
+			)
+		);
+	}
+
+	if (
+		expression.type === 'TSNonNullExpression' ||
+		expression.type === 'TSInstantiationExpression'
+	) {
+		return is_text_primitive_expression(
+			/** @type {AST.Expression} */ (expression.expression),
+			state,
+			visited,
+			strings_only,
+		);
+	}
+
+	if (expression.type === 'TemplateLiteral') {
+		return true;
+	}
+
+	if (is_text_primitive_literal(expression)) {
+		return strings_only
+			? typeof (/** @type {AST.Literal} */ (expression).value) === 'string'
+			: true;
+	}
+
+	if (
+		expression.type === 'CallExpression' &&
+		expression.callee.type === 'Identifier' &&
+		(expression.callee.name === 'String' ||
+			(!strings_only &&
+				(expression.callee.name === 'Number' || expression.callee.name === 'Boolean')))
+	) {
+		return true;
+	}
+
+	// Every binary, unary, and update expression yields a primitive in JS:
+	// `+` returns a string or number (object operands coerce first),
+	// arithmetic/bitwise operators return numbers or bigints, comparisons and
+	// `instanceof`/`in` return booleans, `typeof` returns a string, `void`
+	// returns undefined, `!`/`delete` return booleans. Only `+` with a
+	// provably-string operand and `typeof` prove a STRING.
+	if (expression.type === 'BinaryExpression') {
+		if (!strings_only) return true;
+		return (
+			expression.operator === '+' &&
+			(is_text_primitive_expression(
+				/** @type {AST.Expression} */ (expression.left),
+				state,
+				visited,
+				true,
+			) ||
+				is_text_primitive_expression(expression.right, state, visited, true))
+		);
+	}
+	if (expression.type === 'UnaryExpression') {
+		return strings_only ? expression.operator === 'typeof' : true;
+	}
+	if (expression.type === 'UpdateExpression') {
+		return !strings_only;
+	}
+
+	// `&&`/`||`/`??` return one of their operands, so both must be proven.
+	if (expression.type === 'LogicalExpression') {
+		return (
+			is_text_primitive_expression(
+				/** @type {AST.Expression} */ (expression.left),
+				state,
+				visited,
+				strings_only,
+			) && is_text_primitive_expression(expression.right, state, visited, strings_only)
+		);
+	}
+
+	if (expression.type === 'ConditionalExpression') {
+		return (
+			is_text_primitive_expression(expression.consequent, state, visited, strings_only) &&
+			is_text_primitive_expression(expression.alternate, state, visited, strings_only)
+		);
+	}
+
+	if (expression.type === 'Identifier') {
+		if (expression.name === 'undefined') {
+			return !strings_only;
+		}
+		const binding = state.scope.get(expression.name);
+		if (!binding || binding.node === expression || visited.has(binding)) {
+			return false;
+		}
+		if (is_text_primitive_type_annotation(get_binding_type_annotation(binding), strings_only)) {
+			return true;
+		}
+		if (binding.initial && !binding.reassigned && !binding.mutated && !binding.updated) {
+			visited.add(binding);
+			return is_text_primitive_expression(
+				/** @type {AST.Expression} */ (binding.initial),
+				state,
+				visited,
+				strings_only,
+			);
+		}
+		return false;
+	}
+
+	if (expression.type === 'MemberExpression' && expression.object.type === 'Identifier') {
+		const property_name = get_static_property_name(expression);
+		if (property_name === null) return false;
+
+		const binding = state.scope.get(expression.object.name);
+		const property_type = get_property_type_annotation(
+			get_binding_type_annotation(binding),
+			property_name,
+		);
+		return is_text_primitive_type_annotation(property_type, strings_only);
+	}
+
+	return false;
 }

@@ -326,3 +326,46 @@ export function NestedComponentAsLastSibling() @{
 		<InnerContent />
 	</section>
 }
+
+// A call-containing but provably-text-primitive expression following inlined
+// text: client and server must agree on the DOM shape for the text run.
+function fetchLabel() {
+	return 'fetched';
+}
+
+export function TextTailExpression() @{
+	<div>label: {String(fetchLabel())}</div>
+}
+
+export function FragmentTailExpression() @{
+	// prettier-ignore
+	<div><>{'frag-'}</>{String(fetchLabel())}</div>
+}
+
+export function FragmentChildOnly() @{
+	// prettier-ignore
+	<div><>{'frag-'}</><span>{'tail'}</span></div>
+}
+
+// Fragment-boundary marker prediction: the fragment brackets itself only when
+// its first renderable child emits its own markers — the prediction must match
+// what the expression visitor actually emits.
+function OpaqueLead(props: { header: unknown }) @{
+	// prettier-ignore
+	<>{props.header}<p>{'after-opaque'}</p></>
+}
+
+export function FragmentLeadsWithOpaqueValue() @{
+	// prettier-ignore
+	<div><OpaqueLead header={'H'} /></div>
+}
+
+function PrimitiveCallLead() @{
+	// prettier-ignore
+	<>{String(fetchLabel())}<p>{'after-call'}</p></>
+}
+
+export function FragmentLeadsWithPrimitiveCall() @{
+	// prettier-ignore
+	<div><PrimitiveCallLead /></div>
+}
