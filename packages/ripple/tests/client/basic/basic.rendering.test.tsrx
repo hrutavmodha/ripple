@@ -665,6 +665,19 @@ second
 		expect(container.querySelector('div').textContent).toEqual('count: 42');
 	});
 
+	it('renders a bigint merged into a text run after a string', () => {
+		// `string + bigint` is legal string concatenation in JS (the mixing
+		// TypeError only applies to numeric addition), so a bare bigint literal
+		// merged after a provably-string operand renders its decimal text.
+		function App() @{
+			const label = 'big:';
+			<div>{label}{1n}</div>
+		}
+
+		render(App);
+		expect(container.querySelector('div').textContent).toEqual('big:1');
+	});
+
 	it('should handle multiple consecutive text expressions', () => {
 		function App() @{
 			let name = 'World';

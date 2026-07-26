@@ -617,4 +617,14 @@ second
 		expect(body).toContain('<span>yes</span>');
 		expect(body).not.toContain('<span>no</span>');
 	});
+
+	it('renders a bigint merged into a text run after a string', async () => {
+		function App() @{
+			const label = 'big:';
+			<div>{label}{1n}</div>
+		}
+
+		const { body } = await render(App);
+		expect(body).toContain('<div>big:1</div>');
+	});
 });
