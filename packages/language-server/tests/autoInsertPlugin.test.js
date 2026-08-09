@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { create_auto_insert_harness } from './setup.js';
+import { createAutoInsertPlugin } from '../src/autoInsertPlugin.js';
 
 describe('autoInsert plugin — tag auto-closing', () => {
 	it('auto-closes standard HTML tags like <div>', async () => {
@@ -51,13 +52,15 @@ describe('autoInsert plugin — tag auto-closing', () => {
 	});
 
 	it('auto-closes fragments <>', async () => {
-		const source = 'export function App() {\n\treturn <>;\n}';
-		const { service, uri } = create_auto_insert_harness(source);
+		const source = 'export function App() {\n\treturn <>\n}';
+		const { document, service } = create_auto_insert_harness(source);
+		const plugin = createAutoInsertPlugin().create(service.context);
 
-		const snippet = await service.getAutoInsertSnippet(
-			uri,
-			{ line: 1, character: 9 },
-			{ rangeOffset: 32, rangeLength: 0, text: '>' },
+		const lineText = '\treturn <>';
+		const snippet = await plugin.provideAutoInsertSnippet(
+			document,
+			{ line: 1, character: lineText.length },
+			{ rangeOffset: 33, rangeLength: 0, text: '>' },
 		);
 
 		expect(snippet).toBe('$0</>');
@@ -109,10 +112,53 @@ describe('autoInsert plugin — tag auto-closing', () => {
 		const source = 'export function App() {\n\treturn <div></div>\n}';
 		const { service, uri } = create_auto_insert_harness(source);
 
+		// Position right after opening '>' in <div>
 		const snippet = await service.getAutoInsertSnippet(
 			uri,
 			{ line: 1, character: 13 },
 			{ rangeOffset: 12, rangeLength: 0, text: '>' },
+		);
+
+		expect(snippet).toBeFalsy();
+	});
+
+	it('does not auto-close TypeScript generic function declarations function foo<T>', async () => {
+		const source = 'export function foo<T>() {}';
+		const { service, uri } = create_auto_insert_harness(source);
+
+		const lineText = 'export function foo<T>';
+		const snippet = await service.getAutoInsertSnippet(
+			uri,
+			{ line: 0, character: lineText.length },
+			{ rangeOffset: lineText.length - 1, rangeLength: 0, text: '>' },
+		);
+
+		expect(snippet).toBeFalsy();
+	});
+
+	it('does not auto-close TypeScript generic type definitions type Map<K, V>', async () => {
+		const source = 'export type Dict<K, V> = Map<K, V>;';
+		const { service, uri } = create_auto_insert_harness(source);
+
+		const lineText = 'export type Dict<K, V>';
+		const snippet = await service.getAutoInsertSnippet(
+			uri,
+			{ line: 0, character: lineText.length },
+			{ rangeOffset: lineText.length - 1, rangeLength: 0, text: '>' },
+		);
+
+		expect(snippet).toBeFalsy();
+	});
+
+	it('does not auto-close TypeScript generic function calls useState<number>(0)', async () => {
+		const source = 'const [val, setVal] = useState<number>(0);';
+		const { service, uri } = create_auto_insert_harness(source);
+
+		const lineText = 'const [val, setVal] = useState<number>';
+		const snippet = await service.getAutoInsertSnippet(
+			uri,
+			{ line: 0, character: lineText.length },
+			{ rangeOffset: lineText.length - 1, rangeLength: 0, text: '>' },
 		);
 
 		expect(snippet).toBeFalsy();

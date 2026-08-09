@@ -166,6 +166,45 @@ export function createAutoInsertPlugin() {
 						return null;
 					}
 
+					// DISAMBIGUATION: Prevent auto-closing TypeScript generic type arguments & parameters
+					// 1. Multiple type arguments separated by commas (e.g. <T, U>, <string, number>)
+					if (tagText.includes(',')) {
+						log('TS generic comma list, skipping auto-close:', tagText);
+						return null;
+					}
+
+					// 2. Generic constraints or default types (e.g. <T extends object>, <T = string>)
+					// Exclude JSX attribute assignments like class="btn" or onClick={fn}
+					const tagContent = tagText.slice(1, -1).trim();
+					if (/\bextends\b/.test(tagContent) || (tagContent.includes('=') && !/=\s*["'{]/.test(tagContent))) {
+						log('TS generic constraint/default, skipping auto-close:', tagText);
+						return null;
+					}
+
+					// 3. Single uppercase letter generic type parameter names (e.g. <T>, <U>, <V>, <K>, <T1>)
+					if (/^[A-Z][0-9]?$/.test(tagName)) {
+						log('Single letter TS generic type parameter, skipping auto-close:', tagName);
+						return null;
+					}
+
+					// 4. Preceding TypeScript declaration / type annotation keywords before '<'
+					const codeBeforeAngle = sourceCode.slice(0, openingAngleIndex);
+					const lastLineBeforeAngle = codeBeforeAngle.slice(Math.max(0, codeBeforeAngle.lastIndexOf('\n') + 1));
+					if (
+						/\b(function|type|interface|class|implements|extends|as|new)\s*[\w$]*$/.test(lastLineBeforeAngle) ||
+						/:\s*[\w$.]*$/.test(lastLineBeforeAngle)
+					) {
+						log('TS declaration / type annotation context, skipping auto-close:', lastLineBeforeAngle);
+						return null;
+					}
+
+					// 5. Generic function invocations followed by call parenthesis '(' (e.g. fn<number>(...), useState<string>())
+					const codeAfterAngle = sourceCode.slice(offset);
+					if (/^\s*\(/.test(codeAfterAngle)) {
+						log('TS generic call expression followed by (, skipping auto-close');
+						return null;
+					}
+
 					// Check if there's already a matching closing tag ahead
 					const restOfLine = sourceCode.slice(offset, offset + 100);
 					if (restOfLine.startsWith(`</${tagName}>`)) {

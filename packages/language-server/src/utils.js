@@ -84,13 +84,16 @@ export function concatMarkdownContents(...contents) {
  */
 export function getVirtualCode(document, context) {
 	const uri = URI.parse(document.uri);
-	const decoded = /** @type {[documentUri: URI, embeddedCodeId: string]} */ (
+	const decoded = /** @type {[documentUri: URI, embeddedCodeId: string] | undefined} */ (
 		context.decodeEmbeddedDocumentUri(uri)
 	);
-	const [sourceUri, virtualCodeId] = decoded;
+	const sourceUri = decoded ? decoded[0] : uri;
+	const virtualCodeId = decoded ? decoded[1] : undefined;
 	const sourceScript = context.language.scripts.get(sourceUri);
 	const virtualCode = /** @type {TSRXVirtualCodeInstance} */ (
-		sourceScript?.generated?.embeddedCodes.get(virtualCodeId)
+		virtualCodeId
+			? sourceScript?.generated?.embeddedCodes.get(virtualCodeId)
+			: sourceScript?.generated?.root
 	);
 
 	const sourceMap =
