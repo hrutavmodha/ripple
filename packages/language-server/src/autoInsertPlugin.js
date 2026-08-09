@@ -71,90 +71,111 @@ export function createAutoInsertPlugin() {
 						return null;
 					}
 
-					// Map position back to source
+					// The position is right after the typed '>' in the source document
+					const sourceCode = document.getText();
 					const offset = document.offsetAt(position);
-					const mapping = virtualCode.findMappingByGeneratedRange(lastChange.rangeOffset, offset);
 
-					if (!mapping) {
+					// Ensure character right before cursor is '>'
+					if (offset === 0 || sourceCode[offset - 1] !== '>') {
 						return null;
 					}
 
-					const sourceOffset = mapping.sourceOffsets[0];
-
-					// search backwards from sourceOffset to find the line tag
-					const sourceCode = virtualCode.originalCode;
-					if (sourceCode[sourceOffset - 1] === '/') {
-						// self-closing tag '/>'
+					// Check for self-closing tag '/>'
+					if (offset >= 2 && sourceCode[offset - 2] === '/') {
 						return null;
 					}
 
-					let attempts = 0;
-					let found = false;
-					let i = sourceOffset - 1;
-					for (; i >= 0; i--) {
+					// Find the opening '<' for this tag by searching backwards from '>'
+					let openingAngleIndex = -1;
+					let depth = 0;
+					let inString = false;
+					let stringQuote = '';
+
+					for (let i = offset - 2; i >= 0; i--) {
 						const char = sourceCode[i];
-						if (char === '<') {
-							attempts++;
-							// Confirm that it's definitely the start of the tag
-							// We have `<` and `>` in source maps
-							if (virtualCode.findMappingBySourceRange(i, i + 1)) {
-								found = true;
+
+						// Handle string literals in attribute values (e.g. <div attr=">">)
+						if (inString) {
+							if (char === stringQuote && sourceCode[i - 1] !== '\\') {
+								inString = false;
+							}
+							continue;
+						}
+
+						if (char === '"' || char === "'" || char === '`') {
+							inString = true;
+							stringQuote = char;
+							continue;
+						}
+
+						// Handle nested JSX expressions or generics inside attributes
+						if (char === '}') depth++;
+						else if (char === '{') depth--;
+
+						if (depth === 0) {
+							if (char === '>') {
+								// Hit another tag's closing bracket before finding our opening '<'
+								break;
+							}
+							if (char === '<') {
+								openingAngleIndex = i;
 								break;
 							}
 						}
-
-						if (attempts === 3) {
-							break;
-						}
 					}
 
-					if (!found) {
-						// This shouldn't happen in reality
-						log(`No opening tag position found from source position ${sourceOffset}`);
+					if (openingAngleIndex === -1) {
+						log(`No opening tag found for '>' at offset ${offset}`);
 						return null;
 					}
 
-					const line = sourceCode.slice(i, sourceOffset + 1);
+					const tagText = sourceCode.slice(openingAngleIndex, offset);
 
-					log('Auto-insert triggered at:', {
-						selection: `${position.line}:${position.character}`,
-						line,
-						change: lastChange,
-						sourceOffset,
-					});
+					// Check for JSX Fragment: <>
+					if (tagText === '<>') {
+						log('Fragment matched, inserting </>');
+						const restOfLine = sourceCode.slice(offset, offset + 100);
+						if (restOfLine.startsWith('</>')) {
+							return null;
+						}
+						return '$0</>';
+					}
 
-					// Check if we just typed '>' after a tag name
-					// Match patterns like: <div> or <Component> but not <div /> or <Component/>
-					const tagMatch = line.match(/<([@$\w][\w.-]*)[^>]*?(?<!\/)>$/);
+					// Match patterns like: <div> or <Component attr="val"> or <tag-name>
+					// Exclude self-closing tags (ending with />) and closing tags (starting with </)
+					if (tagText.startsWith('</')) {
+						return null;
+					}
+
+					const tagMatch = tagText.match(/^<([@$\w][\w.-]*)(?:[\s/][^>]*)?>$/);
 					if (!tagMatch) {
-						log('No tag match found');
+						log('No valid tag pattern matched for:', tagText);
 						return null;
 					}
 
 					const tagName = tagMatch[1];
-					log('Tag matched:', tagName);
 
-					// Don't auto-close void elements (self-closing HTML tags)
+					// Ignore TSRX control-flow directives (@if, @for, @switch, @try, @else, @case, @default, @catch)
+					if (/^@(if|for|switch|try|else|case|default|catch)$/.test(tagName)) {
+						return null;
+					}
+
+					// Don't auto-close void elements (self-closing HTML tags like <img>, <input>, etc.)
 					if (VOID_ELEMENTS.has(tagName.toLowerCase())) {
 						log('Void element, skipping auto-close:', tagName);
 						return null;
 					}
 
-					// Check if there's already a closing tag ahead
-					const restOfLine = document.getText({
-						start: position,
-						end: { line: position.line, character: position.character + 100 },
-					});
+					// Check if there's already a matching closing tag ahead
+					const restOfLine = sourceCode.slice(offset, offset + 100);
 					if (restOfLine.startsWith(`</${tagName}>`)) {
 						log('Closing tag already exists, skipping');
 						return null;
 					}
 
-					// Insert the closing tag
+					// Insert the closing tag with $0 cursor position between tags
 					const closingTag = `</${tagName}>`;
 					log('Inserting closing tag:', closingTag);
-
-					// Return a snippet with $0 to place cursor between the tags
 					return `$0${closingTag}`;
 				},
 			};

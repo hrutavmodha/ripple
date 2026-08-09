@@ -9,6 +9,7 @@ import { beforeEach } from 'vitest';
 import { getRippleLanguagePlugin, _reset_for_test } from '@tsrx/typescript-plugin/src/language.js';
 import { createDocumentSymbolPlugin } from '../src/documentSymbolPlugin.js';
 import { createCompletionPlugin } from '../src/completionPlugin.js';
+import { createAutoInsertPlugin } from '../src/autoInsertPlugin.js';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const root_dir = path.resolve(dirname, '../../..');
@@ -105,6 +106,32 @@ export function create_stateful_completion_harness(initial_source, fixture_name 
 	);
 
 	return { service, uri, set_document };
+}
+
+/**
+ * Build a Volar language service wired with the auto insert plugin.
+ * @param {string} source
+ * @param {string} [fixture_name]
+ */
+export function create_auto_insert_harness(source, fixture_name = 'App.tsrx') {
+	const uri = URI.file(path.join(fixture_dir, fixture_name));
+	const scripts = createUriMap();
+	const language = createLanguage([getRippleLanguagePlugin()], scripts, () => {});
+	const source_snapshot = create_snapshot(source);
+	language.scripts.set(uri, source_snapshot, 'ripple');
+
+	const service = createLanguageService(
+		language,
+		[createAutoInsertPlugin()],
+		{
+			workspaceFolders: [URI.file(root_dir)],
+			console,
+		},
+		{},
+	);
+	const document = TextDocument.create(uri.toString(), 'ripple', 0, source);
+
+	return { document, service, uri };
 }
 
 /**
